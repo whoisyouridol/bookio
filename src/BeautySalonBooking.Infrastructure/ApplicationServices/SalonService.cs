@@ -127,7 +127,7 @@ public class SalonService
             .ToListAsync();
 
         return masterServices.Select(ms => new MasterServiceDto(
-            ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Price, ms.DurationMinutes, ms.IsActive
+            ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Service.Photo, ms.Price, ms.DurationMinutes, ms.IsActive
         )).ToList();
     }
 

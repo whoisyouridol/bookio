@@ -26,8 +26,8 @@ public class MasterServiceManager
             existing.Price = req.Price;
             existing.DurationMinutes = req.DurationMinutes;
             await _db.SaveChangesAsync();
-            var svcName = (await _db.Services.FindAsync(req.ServiceId))!.Name;
-            return (new MasterServiceDto(existing.Id, existing.MasterId, existing.ServiceId, svcName, existing.Price, existing.DurationMinutes, existing.IsActive), null);
+            var existingSvc = (await _db.Services.FindAsync(req.ServiceId))!;
+            return (new MasterServiceDto(existing.Id, existing.MasterId, existing.ServiceId, existingSvc.Name, existingSvc.Photo, existing.Price, existing.DurationMinutes, existing.IsActive), null);
         }
 
         var ms = new Domain.Entities.MasterService
@@ -42,7 +42,7 @@ public class MasterServiceManager
         await _db.SaveChangesAsync();
 
         var svc = await _db.Services.FindAsync(req.ServiceId);
-        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, svc!.Name, ms.Price, ms.DurationMinutes, ms.IsActive), null);
+        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, svc!.Name, svc.Photo, ms.Price, ms.DurationMinutes, ms.IsActive), null);
     }
 
     public async Task<(MasterServiceDto? result, string? error)> UpdateAsync(Guid masterId, Guid serviceId, UpdateMasterServiceRequest req)
@@ -57,7 +57,7 @@ public class MasterServiceManager
         ms.DurationMinutes = req.DurationMinutes;
         await _db.SaveChangesAsync();
 
-        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Price, ms.DurationMinutes, ms.IsActive), null);
+        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Service.Photo, ms.Price, ms.DurationMinutes, ms.IsActive), null);
     }
 
     public async Task<bool> RemoveAsync(Guid masterId, Guid serviceId)

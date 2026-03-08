@@ -5,6 +5,7 @@ public record MasterServiceDto(
     Guid MasterId,
     Guid ServiceId,
     string ServiceName,
+    string? ServicePhoto,
     decimal Price,
     int DurationMinutes,
     bool IsActive

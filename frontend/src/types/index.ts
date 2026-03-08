@@ -110,6 +110,7 @@ export interface MasterServiceDto {
   masterId: string;
   serviceId: string;
   serviceName: string;
+  servicePhoto?: string;
   price: number;
   durationMinutes: number;
   isActive: boolean;

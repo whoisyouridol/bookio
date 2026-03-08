@@ -101,6 +101,7 @@ export default function MasterProfilePage() {
                 <ServiceCard
                   key={service.id}
                   service={service}
+                  servicePhoto={service.servicePhoto}
                   selected={selectedServices.some(s => s.id === service.id)}
                   onToggle={() => handleToggle(service)}
                 />
