@@ -25,9 +25,11 @@ public class MasterServiceManager
             existing.IsActive = true;
             existing.Price = req.Price;
             existing.DurationMinutes = req.DurationMinutes;
+            existing.Photo = req.Photo;
+            existing.Description = req.Description;
             await _db.SaveChangesAsync();
             var existingSvc = (await _db.Services.FindAsync(req.ServiceId))!;
-            return (new MasterServiceDto(existing.Id, existing.MasterId, existing.ServiceId, existingSvc.Name, existingSvc.Photo, existing.Price, existing.DurationMinutes, existing.IsActive), null);
+            return (new MasterServiceDto(existing.Id, existing.MasterId, existing.ServiceId, existingSvc.Name, existingSvc.Photo, existing.Photo, existing.Description, existing.Price, existing.DurationMinutes, existing.IsActive), null);
         }
 
         var ms = new Domain.Entities.MasterService
@@ -35,6 +37,8 @@ public class MasterServiceManager
             Id = Guid.NewGuid(),
             MasterId = masterId,
             ServiceId = req.ServiceId,
+            Photo = req.Photo,
+            Description = req.Description,
             Price = req.Price,
             DurationMinutes = req.DurationMinutes,
         };
@@ -42,7 +46,7 @@ public class MasterServiceManager
         await _db.SaveChangesAsync();
 
         var svc = await _db.Services.FindAsync(req.ServiceId);
-        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, svc!.Name, svc.Photo, ms.Price, ms.DurationMinutes, ms.IsActive), null);
+        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, svc!.Name, svc.Photo, ms.Photo, ms.Description, ms.Price, ms.DurationMinutes, ms.IsActive), null);
     }
 
     public async Task<(MasterServiceDto? result, string? error)> UpdateAsync(Guid masterId, Guid serviceId, UpdateMasterServiceRequest req)
@@ -55,9 +59,12 @@ public class MasterServiceManager
 
         ms.Price = req.Price;
         ms.DurationMinutes = req.DurationMinutes;
+        if (req.ClearPhoto) ms.Photo = null;
+        else if (req.Photo != null) ms.Photo = req.Photo;
+        ms.Description = req.Description;
         await _db.SaveChangesAsync();
 
-        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Service.Photo, ms.Price, ms.DurationMinutes, ms.IsActive), null);
+        return (new MasterServiceDto(ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Service.Photo, ms.Photo, ms.Description, ms.Price, ms.DurationMinutes, ms.IsActive), null);
     }
 
     public async Task<bool> RemoveAsync(Guid masterId, Guid serviceId)

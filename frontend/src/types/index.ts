@@ -111,6 +111,8 @@ export interface MasterServiceDto {
   serviceId: string;
   serviceName: string;
   servicePhoto?: string;
+  photo?: string;
+  description?: string;
   price: number;
   durationMinutes: number;
   isActive: boolean;
@@ -120,11 +122,16 @@ export interface AddMasterServiceRequest {
   serviceId: string;
   price: number;
   durationMinutes: number;
+  photo?: string;
+  description?: string;
 }
 
 export interface UpdateMasterServiceRequest {
   price: number;
   durationMinutes: number;
+  photo?: string;
+  clearPhoto?: boolean;
+  description?: string;
 }
 
 // ── TimeSlot ──────────────────────────────────────────────────────────────────

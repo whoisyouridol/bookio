@@ -83,7 +83,7 @@ public class MasterService
             .ToListAsync();
 
         return services.Select(ms => new MasterServiceDto(
-            ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Service.Photo, ms.Price, ms.DurationMinutes, ms.IsActive
+            ms.Id, ms.MasterId, ms.ServiceId, ms.Service.Name, ms.Service.Photo, ms.Photo, ms.Description, ms.Price, ms.DurationMinutes, ms.IsActive
         )).ToList();
     }
 
