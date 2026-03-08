@@ -66,7 +66,7 @@ export default function MyBookingsPage() {
                     {booking.services.map(s => s.serviceName).join(', ')}
                   </p>
                   <p className="font-semibold text-sm text-[var(--color-primary)]">
-                    {Number(booking.totalPrice).toLocaleString()} ₽
+                    {Number(booking.totalPrice).toLocaleString()} ₾
                   </p>
                 </div>
               </Link>

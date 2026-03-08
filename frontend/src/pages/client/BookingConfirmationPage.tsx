@@ -54,7 +54,7 @@ export default function BookingConfirmationPage() {
             {booking.services.map(s => (
               <div key={s.id} className="flex justify-between text-sm">
                 <span className="text-[var(--color-text)]">{s.serviceName}</span>
-                <span className="text-[var(--color-text-secondary)]">{Number(s.price).toLocaleString()} ₽</span>
+                <span className="text-[var(--color-text-secondary)]">{Number(s.price).toLocaleString()} ₾</span>
               </div>
             ))}
           </div>
@@ -63,7 +63,7 @@ export default function BookingConfirmationPage() {
             <div>
               <p className="text-xs text-[var(--color-text-secondary)]">{booking.totalDurationMinutes} min total</p>
               <p className="font-bold text-xl text-[var(--color-primary)]">
-                {Number(booking.totalPrice).toLocaleString()} ₽
+                {Number(booking.totalPrice).toLocaleString()} ₾
               </p>
             </div>
             <span className="text-xs font-medium px-3 py-1 rounded-full bg-green-100 text-green-700">

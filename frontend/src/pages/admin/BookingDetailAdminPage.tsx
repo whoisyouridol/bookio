@@ -83,12 +83,12 @@ export default function BookingDetailAdminPage() {
             {booking.services.map(s => (
               <div key={s.id} className="flex justify-between text-sm">
                 <span className="text-gray-700">{s.serviceName} <span className="text-gray-400">· {s.durationMinutes} min</span></span>
-                <span className="font-medium text-gray-900">{Number(s.price).toLocaleString()} ₽</span>
+                <span className="font-medium text-gray-900">{Number(s.price).toLocaleString()} ₾</span>
               </div>
             ))}
             <div className="flex justify-between font-semibold text-base pt-2 border-t border-gray-100">
               <span>Total</span>
-              <span className="text-purple-600">{Number(booking.totalPrice).toLocaleString()} ₽</span>
+              <span className="text-purple-600">{Number(booking.totalPrice).toLocaleString()} ₾</span>
             </div>
           </div>
         </div>

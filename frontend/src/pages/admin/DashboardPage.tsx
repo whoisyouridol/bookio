@@ -49,7 +49,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-xs text-gray-500">{b.bookingDate} {b.startTime.slice(0, 5)}</p>
-                  <p className="text-sm font-semibold text-purple-600">{Number(b.totalPrice).toLocaleString()} ₽</p>
+                  <p className="text-sm font-semibold text-purple-600">{Number(b.totalPrice).toLocaleString()} ₾</p>
                 </div>
                 <Badge variant={bookingStatusBadge(b.status)}>{b.status}</Badge>
               </Link>

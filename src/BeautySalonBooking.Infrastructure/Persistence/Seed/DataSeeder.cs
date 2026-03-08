@@ -29,6 +29,7 @@ public static class DataSeeder
             new() { Id = serviceIds.Pedicure, Name = "Pedicure",          Description = "Relaxing pedicure with scrub and polish",          Photo = "https://images.unsplash.com/photo-1519415943484-9fa1873496d4?w=600&h=400&fit=crop", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new() { Id = serviceIds.Eyebrows, Name = "Eyebrow Shaping",   Description = "Precision threading, waxing or microblading",      Photo = "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&h=400&fit=crop", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
         };
+
         await context.Services.AddRangeAsync(services);
 
         // --- Masters ---
@@ -41,9 +42,9 @@ public static class DataSeeder
 
         var masters = new List<Master>
         {
-            new() { Id = masterIds.Anna,  FirstName = "Anna",  LastName = "Petrova",  Phone = "+79001110001", Photo = "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&face", Description = "Hair specialist with 8 years of experience. Specialises in balayage, highlights and creative colouring.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new() { Id = masterIds.Maria, FirstName = "Maria", LastName = "Sidorova", Phone = "+79001110002", Photo = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&face", Description = "Certified nail technician and beauty artist. Expert in gel extensions, nail art and pedicure treatments.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new() { Id = masterIds.Olga,  FirstName = "Olga",  LastName = "Ivanova",  Phone = "+79001110003", Photo = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&face", Description = "Universal beauty master with 5 years of experience in hair, nails and brow styling.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new() { Id = masterIds.Anna,  FirstName = "Ashley",  LastName = "Morgan",   Phone = "+14155550101", Photo = "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&face", Description = "Hair specialist with 8 years of experience based in San Francisco. Specializes in balayage, highlights and creative color transformations.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new() { Id = masterIds.Maria, FirstName = "Jessica", LastName = "Williams",  Phone = "+14155550102", Photo = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&face", Description = "Certified nail technician and beauty artist with 6 years in the industry. Expert in gel extensions, nail art and pedicure treatments.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new() { Id = masterIds.Olga,  FirstName = "Lauren",  LastName = "Davis",    Phone = "+14155550103", Photo = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&face", Description = "Versatile beauty professional with 5 years of experience across hair styling, nail care and precision brow shaping.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
         };
         await context.Masters.AddRangeAsync(masters);
 
@@ -61,8 +62,8 @@ public static class DataSeeder
         {
             new()
             {
-                Id = salonIds.Bloom, Name = "Bloom Beauty Studio", Address = "Moscow, Tverskaya st. 10",
-                GoogleMapsUrl = "https://maps.google.com/?q=Tverskaya+10+Moscow",
+                Id = salonIds.Bloom, Name = "Glow Beauty Studio", Address = "742 Market St, San Francisco, CA 94102",
+                GoogleMapsUrl = "https://maps.google.com/?q=742+Market+St+San+Francisco+CA",
                 WorkingHoursStart = new TimeOnly(9, 0), WorkingHoursEnd = new TimeOnly(21, 0),
                 WorkingDays = workdaysMonSat,
                 Photos = [
@@ -74,8 +75,8 @@ public static class DataSeeder
             },
             new()
             {
-                Id = salonIds.Charm, Name = "Charm Hair & Nails", Address = "Moscow, Arbat st. 25",
-                GoogleMapsUrl = "https://maps.google.com/?q=Arbat+25+Moscow",
+                Id = salonIds.Charm, Name = "Luxe Hair & Nails", Address = "1280 Lexington Ave, New York, NY 10028",
+                GoogleMapsUrl = "https://maps.google.com/?q=1280+Lexington+Ave+New+York+NY",
                 WorkingHoursStart = new TimeOnly(10, 0), WorkingHoursEnd = new TimeOnly(20, 0),
                 WorkingDays = workdaysMonFri,
                 Photos = [
@@ -111,17 +112,17 @@ public static class DataSeeder
         // --- MasterServices ---
         var masterServices = new List<MasterService>
         {
-            // Anna: haircut + coloring
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ServiceId = serviceIds.Haircut,  Price = 1500, DurationMinutes = 60 },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ServiceId = serviceIds.Coloring, Price = 4500, DurationMinutes = 120 },
-            // Maria: manicure + pedicure + eyebrows
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ServiceId = serviceIds.Manicure, Price = 1200, DurationMinutes = 60 },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ServiceId = serviceIds.Pedicure, Price = 1800, DurationMinutes = 90 },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ServiceId = serviceIds.Eyebrows, Price = 800,  DurationMinutes = 30 },
-            // Olga: all services
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ServiceId = serviceIds.Haircut,  Price = 1800, DurationMinutes = 60 },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ServiceId = serviceIds.Manicure, Price = 1300, DurationMinutes = 60 },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ServiceId = serviceIds.Eyebrows, Price = 900,  DurationMinutes = 30 },
+            // Ashley: haircut + coloring
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ServiceId = serviceIds.Haircut,  Price = 85,  DurationMinutes = 60 },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ServiceId = serviceIds.Coloring, Price = 220, DurationMinutes = 120 },
+            // Jessica: manicure + pedicure + eyebrows
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ServiceId = serviceIds.Manicure, Price = 55,  DurationMinutes = 60 },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ServiceId = serviceIds.Pedicure, Price = 75,  DurationMinutes = 90 },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ServiceId = serviceIds.Eyebrows, Price = 35,  DurationMinutes = 30 },
+            // Lauren: all services
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ServiceId = serviceIds.Haircut,  Price = 95,  DurationMinutes = 60 },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ServiceId = serviceIds.Manicure, Price = 60,  DurationMinutes = 60 },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ServiceId = serviceIds.Eyebrows, Price = 40,  DurationMinutes = 30 },
         };
         await context.MasterServices.AddRangeAsync(masterServices);
 
@@ -158,13 +159,13 @@ public static class DataSeeder
         // --- Sample ratings ---
         var ratings = new List<MasterRating>
         {
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ClientName = "Sofia K.",   Rating = 5, Comment = "Anna is amazing! My hair has never looked this good.", CreatedAt = DateTime.UtcNow.AddDays(-10) },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ClientName = "Elena M.",   Rating = 5, Comment = "Perfect balayage, exactly what I wanted!", CreatedAt = DateTime.UtcNow.AddDays(-5) },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ClientName = "Darya P.",   Rating = 4, Comment = "Great results, will definitely come back.", CreatedAt = DateTime.UtcNow.AddDays(-2) },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ClientName = "Natasha V.", Rating = 5, Comment = "Best manicure in Moscow, super clean and precise.", CreatedAt = DateTime.UtcNow.AddDays(-7) },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ClientName = "Anya S.",    Rating = 5, Comment = "Incredible nail art, everyone asks where I go!", CreatedAt = DateTime.UtcNow.AddDays(-3) },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ClientName = "Irina L.",   Rating = 5, Comment = "Olga is a true professional. Highly recommend!", CreatedAt = DateTime.UtcNow.AddDays(-6) },
-            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ClientName = "Vera N.",    Rating = 4, Comment = "Very attentive and skilled. Great experience overall.", CreatedAt = DateTime.UtcNow.AddDays(-1) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ClientName = "Brittany H.", Rating = 5, Comment = "Ashley is absolutely amazing! My hair has never looked this good.", CreatedAt = DateTime.UtcNow.AddDays(-10) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ClientName = "Megan T.",    Rating = 5, Comment = "Perfect balayage, exactly what I wanted. 10/10!", CreatedAt = DateTime.UtcNow.AddDays(-5) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Anna,  ClientName = "Rachel K.",   Rating = 4, Comment = "Great results and very professional. Will definitely come back.", CreatedAt = DateTime.UtcNow.AddDays(-2) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ClientName = "Stephanie R.", Rating = 5, Comment = "Best manicure in the city — super clean and precise work.", CreatedAt = DateTime.UtcNow.AddDays(-7) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Maria, ClientName = "Amanda S.",   Rating = 5, Comment = "Incredible nail art, everyone keeps asking where I go!", CreatedAt = DateTime.UtcNow.AddDays(-3) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ClientName = "Nicole B.",   Rating = 5, Comment = "Lauren is a true professional. Highly recommend to anyone!", CreatedAt = DateTime.UtcNow.AddDays(-6) },
+            new() { Id = Guid.NewGuid(), MasterId = masterIds.Olga,  ClientName = "Christina M.", Rating = 4, Comment = "Very attentive and skilled. Great overall experience.", CreatedAt = DateTime.UtcNow.AddDays(-1) },
         };
         await context.MasterRatings.AddRangeAsync(ratings);
 

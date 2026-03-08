@@ -57,7 +57,7 @@ export function BookingSummary({
         {selectedServices.map(s => (
           <div key={s.id} className="flex items-center justify-between text-sm">
             <span className="text-[var(--color-text)]">{s.serviceName}</span>
-            <span className="text-[var(--color-text-secondary)]">{s.price.toLocaleString()} ₽</span>
+            <span className="text-[var(--color-text-secondary)]">{s.price.toLocaleString()} ₾</span>
           </div>
         ))}
       </div>
@@ -65,7 +65,7 @@ export function BookingSummary({
       <div className="p-4 flex items-center justify-between">
         <div>
           <p className="text-xs text-[var(--color-text-secondary)]">{totalDuration} min total</p>
-          <p className="font-semibold text-lg text-[var(--color-primary)]">{totalPrice.toLocaleString()} ₽</p>
+          <p className="font-semibold text-lg text-[var(--color-primary)]">{totalPrice.toLocaleString()} ₾</p>
         </div>
       </div>
     </div>

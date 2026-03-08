@@ -132,7 +132,7 @@ export default function MasterProfilePage() {
             >
               <div>
                 <p className="text-xs text-[var(--color-text-secondary)]">{totalDuration} min</p>
-                <p className="font-semibold text-lg text-[var(--color-primary)]">{totalPrice.toLocaleString()} ₽</p>
+                <p className="font-semibold text-lg text-[var(--color-primary)]">{totalPrice.toLocaleString()} ₾</p>
               </div>
               <Button onClick={handleBook} size="lg" className="flex-1">
                 Continue ({selectedServices.length})

@@ -60,14 +60,14 @@ export default function ViewBookingPage() {
             {booking.services.map(s => (
               <div key={s.id} className="flex justify-between text-sm">
                 <span className="text-[var(--color-text)]">{s.serviceName}</span>
-                <span className="text-[var(--color-text-secondary)]">{Number(s.price).toLocaleString()} ₽</span>
+                <span className="text-[var(--color-text-secondary)]">{Number(s.price).toLocaleString()} ₾</span>
               </div>
             ))}
           </div>
 
           <div className="p-4 flex justify-between">
             <p className="text-sm text-[var(--color-text-secondary)]">{booking.totalDurationMinutes} min</p>
-            <p className="font-bold text-lg text-[var(--color-primary)]">{Number(booking.totalPrice).toLocaleString()} ₽</p>
+            <p className="font-bold text-lg text-[var(--color-primary)]">{Number(booking.totalPrice).toLocaleString()} ₾</p>
           </div>
         </div>
 

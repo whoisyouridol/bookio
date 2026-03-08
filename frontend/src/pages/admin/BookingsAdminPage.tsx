@@ -87,7 +87,7 @@ export default function BookingsAdminPage() {
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-32 truncate">
                       {b.services.map(s => s.serviceName).join(', ')}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-purple-600">{Number(b.totalPrice).toLocaleString()} ₽</td>
+                    <td className="px-4 py-3 font-semibold text-purple-600">{Number(b.totalPrice).toLocaleString()} ₾</td>
                     <td className="px-4 py-3"><Badge variant={bookingStatusBadge(b.status)}>{b.status}</Badge></td>
                     <td className="px-4 py-3">
                       <Link to={`/admin/bookings/${b.id}`} className="text-purple-600 hover:underline text-xs font-medium">

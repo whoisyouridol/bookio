@@ -125,7 +125,7 @@ export default function MasterFormPage() {
               <div key={ms.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-gray-900">{ms.serviceName}</p>
-                  <p className="text-xs text-gray-500">{ms.durationMinutes} min · {ms.price.toLocaleString()} ₽</p>
+                  <p className="text-xs text-gray-500">{ms.durationMinutes} min · {ms.price.toLocaleString()} ₾</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => removeServiceMutation.mutate(ms.serviceId)}>
                   <Trash2 className="w-4 h-4 text-red-400" />
@@ -148,7 +148,7 @@ export default function MasterFormPage() {
                   {catalog?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              <input type="number" placeholder="Price ₽" value={addPrice} onChange={e => setAddPrice(e.target.value)}
+              <input type="number" placeholder="Price ₾" value={addPrice} onChange={e => setAddPrice(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
               <input type="number" placeholder="Duration min" value={addDuration} onChange={e => setAddDuration(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />

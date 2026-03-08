@@ -39,7 +39,7 @@ export function ServiceCard({ service, servicePhoto, selected = false, onToggle 
 
       <div className="flex items-center justify-between mt-auto pt-1">
         <span className="font-semibold text-sm text-[var(--color-primary)]">
-          {service.price.toLocaleString()} ₽
+          {service.price.toLocaleString()} ₾
         </span>
         <div className="flex items-center gap-1 text-xs text-[var(--color-text-secondary)]">
           <Clock className="w-3 h-3" />

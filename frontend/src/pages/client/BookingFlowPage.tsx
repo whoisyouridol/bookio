@@ -97,7 +97,7 @@ export default function BookingFlowPage() {
             </div>
             <div className="text-right">
               <p className="text-xs text-[var(--color-text-secondary)]">{booking.totalDuration} min</p>
-              <p className="font-semibold text-sm text-[var(--color-primary)]">{booking.totalPrice.toLocaleString()} ₽</p>
+              <p className="font-semibold text-sm text-[var(--color-primary)]">{booking.totalPrice.toLocaleString()} ₾</p>
             </div>
           </div>
         </div>
