@@ -1,0 +1,27 @@
+using BeautySalonBooking.Application.DTOs;
+using FluentValidation;
+
+namespace BeautySalonBooking.Application.Validators;
+
+public class CreateBookingValidator : AbstractValidator<CreateBookingRequest>
+{
+    public CreateBookingValidator()
+    {
+        RuleFor(x => x.SalonId).NotEmpty();
+        RuleFor(x => x.MasterId).NotEmpty();
+        RuleFor(x => x.ClientName).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.ClientPhone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.ClientEmail).EmailAddress().When(x => !string.IsNullOrEmpty(x.ClientEmail));
+        RuleFor(x => x.BookingDate).NotEmpty().Matches(@"^\d{4}-\d{2}-\d{2}$").WithMessage("Use YYYY-MM-DD format");
+        RuleFor(x => x.StartTime).NotEmpty().Matches(@"^\d{2}:\d{2}$").WithMessage("Use HH:mm format");
+        RuleFor(x => x.ServiceIds).NotEmpty().WithMessage("At least one service is required");
+    }
+}
+
+public class CancelBookingValidator : AbstractValidator<CancelBookingRequest>
+{
+    public CancelBookingValidator()
+    {
+        RuleFor(x => x.Side).NotEmpty().Must(s => s == "Client" || s == "Master").WithMessage("Side must be 'Client' or 'Master'");
+    }
+}

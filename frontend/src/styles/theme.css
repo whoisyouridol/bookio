@@ -1,0 +1,35 @@
+:root {
+  /* Default theme — purple */
+  --color-primary: #8B5CF6;
+  --color-primary-dark: #7C3AED;
+  --color-primary-light: #A78BFA;
+  --color-accent: #EC4899;
+  --color-background: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-text: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-border: #E5E7EB;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --font-family: "Inter", system-ui, sans-serif;
+  --border-radius: 12px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-family);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1 { font-size: 1.5rem; font-weight: 600; line-height: 1.4; }
+  h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.4; }
+  h3 { font-size: 1.125rem; font-weight: 500; line-height: 1.4; }
+  h4 { font-size: 1rem; font-weight: 500; line-height: 1.4; }
+}

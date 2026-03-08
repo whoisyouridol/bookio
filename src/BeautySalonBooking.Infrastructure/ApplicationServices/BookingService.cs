@@ -1,0 +1,235 @@
+using BeautySalonBooking.Application.DTOs;
+using BeautySalonBooking.Application.Interfaces;
+using BeautySalonBooking.Domain.Entities;
+using BeautySalonBooking.Domain.Enums;
+using BeautySalonBooking.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace BeautySalonBooking.Infrastructure.ApplicationServices;
+
+public class BookingService
+{
+    private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
+
+    public BookingService(AppDbContext db, INotificationService notifications)
+    {
+        _db = db;
+        _notifications = notifications;
+    }
+
+    public async Task<List<BookingDto>> GetAllAsync(BookingFilterRequest filter)
+    {
+        var query = _db.Bookings
+            .Include(b => b.Salon)
+            .Include(b => b.Master)
+            .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
+            .AsQueryable();
+
+        if (filter.SalonId.HasValue) query = query.Where(b => b.SalonId == filter.SalonId);
+        if (filter.MasterId.HasValue) query = query.Where(b => b.MasterId == filter.MasterId);
+        if (!string.IsNullOrEmpty(filter.Status) && Enum.TryParse<BookingStatus>(filter.Status, out var status))
+            query = query.Where(b => b.Status == status);
+        if (!string.IsNullOrEmpty(filter.DateFrom) && DateOnly.TryParse(filter.DateFrom, out var dateFrom))
+            query = query.Where(b => b.BookingDate >= dateFrom);
+        if (!string.IsNullOrEmpty(filter.DateTo) && DateOnly.TryParse(filter.DateTo, out var dateTo))
+            query = query.Where(b => b.BookingDate <= dateTo);
+
+        var bookings = await query.OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime).ToListAsync();
+        return bookings.Select(MapToDto).ToList();
+    }
+
+    public async Task<BookingDto?> GetByIdAsync(Guid id)
+    {
+        var b = await _db.Bookings
+            .Include(x => x.Salon)
+            .Include(x => x.Master)
+            .Include(x => x.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        return b == null ? null : MapToDto(b);
+    }
+
+    public async Task<(BookingDto? result, string? error)> CreateAsync(CreateBookingRequest req)
+    {
+        if (!DateOnly.TryParse(req.BookingDate, out var date))
+            return (null, "Invalid booking date");
+        if (!TimeOnly.TryParse(req.StartTime, out var startTime))
+            return (null, "Invalid start time");
+
+        var salonExists = await _db.Salons.AnyAsync(s => s.Id == req.SalonId && s.IsActive);
+        if (!salonExists) return (null, "Salon not found");
+
+        var masterExists = await _db.Masters.AnyAsync(m => m.Id == req.MasterId && m.IsActive);
+        if (!masterExists) return (null, "Master not found");
+
+        var sm = await _db.SalonMasters.FirstOrDefaultAsync(x => x.SalonId == req.SalonId && x.MasterId == req.MasterId && x.IsActive);
+        if (sm == null) return (null, "Master does not work at this salon");
+
+        var masterServices = await _db.MasterServices
+            .Include(ms => ms.Service)
+            .Where(ms => ms.MasterId == req.MasterId && req.ServiceIds.Contains(ms.ServiceId) && ms.IsActive)
+            .ToListAsync();
+
+        if (masterServices.Count != req.ServiceIds.Count)
+            return (null, "One or more services not found for this master");
+
+        int totalDuration = masterServices.Sum(ms => ms.DurationMinutes);
+        decimal totalPrice = masterServices.Sum(ms => ms.Price);
+        var endTime = startTime.AddMinutes(totalDuration);
+
+        // Collect contiguous available slots starting at startTime that together cover totalDuration.
+        // Using StartTime >= startTime (not EndTime <= endTime) so that a single 60-min slot
+        // correctly covers a 30- or 45-min service.
+        var candidateSlots = await _db.TimeSlots
+            .Where(ts => ts.SalonMasterId == sm.Id && ts.Date == date &&
+                         ts.StartTime >= startTime &&
+                         ts.Status == TimeSlotStatus.Available)
+            .OrderBy(ts => ts.StartTime)
+            .ToListAsync();
+
+        var requiredSlots = new List<Domain.Entities.TimeSlot>();
+        var coveredMinutes = 0;
+        TimeOnly? prev = null;
+        foreach (var slot in candidateSlots)
+        {
+            if (prev.HasValue && slot.StartTime != prev.Value) break;
+            requiredSlots.Add(slot);
+            coveredMinutes += (int)(slot.EndTime - slot.StartTime).TotalMinutes;
+            prev = slot.EndTime;
+            if (coveredMinutes >= totalDuration) break;
+        }
+
+        if (coveredMinutes < totalDuration)
+            return (null, "Not enough available time slots for the requested duration");
+
+        // Mark slots as booked
+        foreach (var slot in requiredSlots)
+            slot.Status = TimeSlotStatus.Booked;
+
+        var booking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            SalonId = req.SalonId,
+            MasterId = req.MasterId,
+            ClientName = req.ClientName,
+            ClientPhone = req.ClientPhone,
+            ClientEmail = req.ClientEmail,
+            BookingDate = date,
+            StartTime = startTime,
+            EndTime = endTime,
+            TotalPrice = totalPrice,
+            TotalDurationMinutes = totalDuration,
+            Status = BookingStatus.Pending,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        booking.BookingServices = masterServices.Select(ms => new Domain.Entities.BookingService
+        {
+            Id = Guid.NewGuid(),
+            BookingId = booking.Id,
+            MasterServiceId = ms.Id,
+            Price = ms.Price,
+            DurationMinutes = ms.DurationMinutes,
+        }).ToList();
+
+        _db.Bookings.Add(booking);
+        await _db.SaveChangesAsync();
+
+        await _notifications.SendBookingConfirmationAsync(booking.Id);
+
+        var created = await _db.Bookings
+            .Include(b => b.Salon).Include(b => b.Master)
+            .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
+            .FirstAsync(b => b.Id == booking.Id);
+
+        return (MapToDto(created), null);
+    }
+
+    public async Task<(BookingDto? result, string? error)> ConfirmAsync(Guid id)
+    {
+        var booking = await LoadFullAsync(id);
+        if (booking == null) return (null, "Booking not found");
+        if (booking.Status != BookingStatus.Pending) return (null, "Only pending bookings can be confirmed");
+
+        booking.Status = BookingStatus.Confirmed;
+        booking.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return (MapToDto(booking), null);
+    }
+
+    public async Task<(BookingDto? result, string? error)> CompleteAsync(Guid id)
+    {
+        var booking = await LoadFullAsync(id);
+        if (booking == null) return (null, "Booking not found");
+        if (booking.Status != BookingStatus.Confirmed) return (null, "Only confirmed bookings can be completed");
+
+        var bookingEnd = booking.BookingDate.ToDateTime(booking.EndTime, DateTimeKind.Utc);
+        if (DateTime.UtcNow < bookingEnd) return (null, "Cannot complete a booking before its end time");
+
+        booking.Status = BookingStatus.Completed;
+        booking.CompletedAt = DateTime.UtcNow;
+        booking.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return (MapToDto(booking), null);
+    }
+
+    public async Task<(BookingDto? result, string? error)> CancelAsync(Guid id, CancelBookingRequest req)
+    {
+        var booking = await LoadFullAsync(id);
+        if (booking == null) return (null, "Booking not found");
+        if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Confirmed)
+            return (null, "Only pending or confirmed bookings can be cancelled");
+
+        var side = req.Side == "Master" ? CancellationSide.Master : CancellationSide.Client;
+        booking.Status = side == CancellationSide.Master ? BookingStatus.CancelledByMaster : BookingStatus.CancelledByClient;
+        booking.CancelledAt = DateTime.UtcNow;
+        booking.CancellationReason = req.Reason;
+        booking.UpdatedAt = DateTime.UtcNow;
+
+        // Release slots
+        var sm = await _db.SalonMasters.FirstOrDefaultAsync(x => x.SalonId == booking.SalonId && x.MasterId == booking.MasterId);
+        if (sm != null)
+        {
+            var slots = await _db.TimeSlots
+                .Where(ts => ts.SalonMasterId == sm.Id && ts.Date == booking.BookingDate &&
+                             ts.StartTime >= booking.StartTime && ts.EndTime <= booking.EndTime &&
+                             ts.Status == TimeSlotStatus.Booked)
+                .ToListAsync();
+
+            foreach (var slot in slots)
+                slot.Status = TimeSlotStatus.Available;
+        }
+
+        await _db.SaveChangesAsync();
+        await _notifications.SendCancellationNotificationAsync(booking.Id, side);
+
+        return (MapToDto(booking), null);
+    }
+
+    public async Task<List<BookingDto>> GetBySalonAsync(Guid salonId)
+        => await GetAllAsync(new BookingFilterRequest(salonId, null, null, null, null));
+
+    public async Task<List<BookingDto>> GetByMasterAsync(Guid masterId)
+        => await GetAllAsync(new BookingFilterRequest(null, masterId, null, null, null));
+
+    private async Task<Booking?> LoadFullAsync(Guid id) => await _db.Bookings
+        .Include(b => b.Salon).Include(b => b.Master)
+        .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
+        .FirstOrDefaultAsync(b => b.Id == id);
+
+    private static BookingDto MapToDto(Booking b) => new(
+        b.Id, b.SalonId, b.Salon.Name,
+        b.MasterId, $"{b.Master.FirstName} {b.Master.LastName}",
+        b.ClientName, b.ClientPhone, b.ClientEmail,
+        b.BookingDate.ToString("yyyy-MM-dd"),
+        b.StartTime.ToString("HH:mm"),
+        b.EndTime.ToString("HH:mm"),
+        b.TotalPrice, b.TotalDurationMinutes,
+        b.Status.ToString(), b.CreatedAt, b.CompletedAt, b.CancelledAt, b.CancellationReason,
+        b.BookingServices.Select(bs => new BookingServiceDto(
+            bs.Id, bs.MasterService.ServiceId, bs.MasterService.Service.Name, bs.Price, bs.DurationMinutes
+        )).ToList()
+    );
+}
