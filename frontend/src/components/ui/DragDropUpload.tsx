@@ -29,7 +29,8 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
   const [uploading, setUploading] = useState(false);
 
   const handleFiles = useCallback(async (files: File[]) => {
-    const remaining = maxFiles - values.length;
+    const replace = maxFiles === 1 && values.length >= 1;
+    const remaining = replace ? 1 : maxFiles - values.length;
     if (remaining <= 0) {
       toast.error(`Maximum ${maxFiles} file(s) allowed.`);
       return;
@@ -38,7 +39,7 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
     setUploading(true);
     try {
       const results = await Promise.all(toUpload.map(f => uploadMedia(f, folder)));
-      onChange([...values, ...results.map(r => r.key)]);
+      onChange(replace ? results.map(r => r.key) : [...values, ...results.map(r => r.key)]);
     } catch {
       toast.error('Upload failed. Please try again.');
     } finally {
