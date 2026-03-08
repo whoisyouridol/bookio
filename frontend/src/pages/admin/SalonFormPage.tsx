@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, X } from 'lucide-react';
 import { getSalon, createSalon, updateSalon } from '@/api/salons';
 import { Button } from '@/components/ui/Button';
+import { DragDropUpload } from '@/components/ui/DragDropUpload';
 import { Loader } from '@/components/ui/Loader';
 import { toast } from 'sonner';
 
@@ -28,7 +28,7 @@ export default function SalonFormPage() {
   const [hoursStart, setHoursStart] = useState('09:00');
   const [hoursEnd, setHoursEnd] = useState('21:00');
   const [workingDays, setWorkingDays] = useState<string[]>(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
-  const [photos, setPhotos] = useState<string[]>(['']);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function SalonFormPage() {
       setHoursStart(existing.workingHoursStart.slice(0, 5));
       setHoursEnd(existing.workingHoursEnd.slice(0, 5));
       setWorkingDays(existing.workingDays);
-      setPhotos(existing.photos.length ? existing.photos : ['']);
+      setPhotos(existing.photos);
       setVideos(existing.videos);
     }
   }, [existing]);
@@ -107,8 +107,14 @@ export default function SalonFormPage() {
           </div>
         </div>
 
-        <UrlList label="Photos" items={photos} onChange={setPhotos} placeholder="https://..." />
-        <UrlList label="Videos" items={videos} onChange={setVideos} placeholder="https://..." />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Photos</label>
+          <DragDropUpload folder="salons" accept="image" maxFiles={10} values={photos} onChange={setPhotos} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Videos</label>
+          <DragDropUpload folder="salons" accept="video" maxFiles={5} values={videos} onChange={setVideos} />
+        </div>
 
         <div className="flex gap-3 pt-2">
           <Button type="button" variant="secondary" size="lg" onClick={() => navigate(-1)} className="flex-1">
@@ -140,33 +146,3 @@ function Field({ label, value, onChange, type = 'text', required = false }: {
   );
 }
 
-function UrlList({ label, items, onChange, placeholder }: {
-  label: string; items: string[]; onChange: (v: string[]) => void; placeholder: string;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      <div className="space-y-2">
-        {items.map((url, i) => (
-          <div key={i} className="flex gap-2">
-            <input
-              type="url"
-              value={url}
-              onChange={e => { const n = [...items]; n[i] = e.target.value; onChange(n); }}
-              placeholder={placeholder}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
-            />
-            <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))}
-              className="p-2 text-gray-400 hover:text-red-500">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
-        <button type="button" onClick={() => onChange([...items, ''])}
-          className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-800">
-          <Plus className="w-3.5 h-3.5" /> Add URL
-        </button>
-      </div>
-    </div>
-  );
-}

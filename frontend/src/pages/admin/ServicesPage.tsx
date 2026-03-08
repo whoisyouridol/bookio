@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Scissors } from 'lucide-react';
 import { getServices, createService, updateService, deleteService } from '@/api/services';
 import { Button } from '@/components/ui/Button';
+import { DragDropUpload } from '@/components/ui/DragDropUpload';
 import { Loader } from '@/components/ui/Loader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
@@ -18,14 +19,14 @@ export default function ServicesPage() {
   const [editing, setEditing] = useState<ServiceDto | null>(null);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
-  const [photo, setPhoto] = useState('');
+  const [photoKeys, setPhotoKeys] = useState<string[]>([]);
 
-  const openCreate = () => { setEditing(null); setName(''); setDesc(''); setPhoto(''); setModal(true); };
-  const openEdit = (s: ServiceDto) => { setEditing(s); setName(s.name); setDesc(s.description ?? ''); setPhoto(s.photo ?? ''); setModal(true); };
+  const openCreate = () => { setEditing(null); setName(''); setDesc(''); setPhotoKeys([]); setModal(true); };
+  const openEdit = (s: ServiceDto) => { setEditing(s); setName(s.name); setDesc(s.description ?? ''); setPhotoKeys(s.photo ? [s.photo] : []); setModal(true); };
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const payload = { name, description: desc || undefined, photo: photo || undefined };
+      const payload = { name, description: desc || undefined, photo: photoKeys[0] || undefined };
       return editing ? updateService(editing.id, payload) : createService(payload);
     },
     onSuccess: () => {
@@ -88,9 +89,8 @@ export default function ServicesPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Photo URL</label>
-            <input type="url" value={photo} onChange={e => setPhoto(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+            <DragDropUpload folder="services" accept="image" maxFiles={1} values={photoKeys} onChange={setPhotoKeys} />
           </div>
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="secondary" onClick={() => setModal(false)} className="flex-1">Cancel</Button>

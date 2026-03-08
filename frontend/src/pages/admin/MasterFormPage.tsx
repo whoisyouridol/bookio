@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMaster, createMaster, updateMaster, getMasterServices, addMasterService, removeMasterService } from '@/api/masters';
 import { getServices } from '@/api/services';
 import { Button } from '@/components/ui/Button';
+import { DragDropUpload } from '@/components/ui/DragDropUpload';
 import { Loader } from '@/components/ui/Loader';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
@@ -31,7 +32,7 @@ export default function MasterFormPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [photo, setPhoto] = useState('');
+  const [photoKeys, setPhotoKeys] = useState<string[]>([]);
   const [description, setDescription] = useState('');
 
   // Add-service form
@@ -44,14 +45,14 @@ export default function MasterFormPage() {
       setFirstName(existing.firstName);
       setLastName(existing.lastName);
       setPhone(existing.phone);
-      setPhoto(existing.photo ?? '');
+      setPhotoKeys(existing.photo ? [existing.photo] : []);
       setDescription(existing.description ?? '');
     }
   }, [existing]);
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const payload = { firstName, lastName, phone, photo: photo || undefined, description: description || undefined };
+      const payload = { firstName, lastName, phone, photo: photoKeys[0] || undefined, description: description || undefined };
       return isNew ? createMaster(payload) : updateMaster(masterId!, payload);
     },
     onSuccess: () => {
@@ -96,7 +97,10 @@ export default function MasterFormPage() {
           <Field label="Last Name *" value={lastName} onChange={setLastName} required />
         </div>
         <Field label="Phone *" value={phone} onChange={setPhone} required />
-        <Field label="Photo URL" value={photo} onChange={setPhoto} />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Photo</label>
+          <DragDropUpload folder="masters" accept="image" maxFiles={1} values={photoKeys} onChange={setPhotoKeys} />
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
           <textarea

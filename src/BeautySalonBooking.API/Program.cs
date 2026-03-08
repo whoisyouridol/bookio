@@ -1,11 +1,14 @@
 using BeautySalonBooking.API.Middleware;
 using BeautySalonBooking.Application;
+using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Infrastructure;
 using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Infrastructure.Persistence.Seed;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 104_857_600); // 100 MB
 
 // Serilog
 Log.Logger = new LoggerConfiguration()
@@ -50,6 +53,21 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to initialize database");
+    }
+}
+
+// Ensure MinIO bucket exists
+using (var scope = app.Services.CreateScope())
+{
+    var storage = scope.ServiceProvider.GetRequiredService<IStorageService>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        await storage.EnsureBucketAsync();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to initialize MinIO bucket");
     }
 }
 
