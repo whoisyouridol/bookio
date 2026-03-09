@@ -14,7 +14,8 @@ import type { MasterServiceDto } from '@/types';
 export default function MasterProfilePage() {
   const { salonId, masterId } = useParams<{ salonId: string; masterId: string }>();
   const navigate = useNavigate();
-  const { setSalon, setMaster, toggleService, selectedServices, totalPrice, totalDuration } = useBooking();
+  const booking = useBooking();
+  const { setSalon, setMaster, toggleService, selectedServices, totalPrice, totalDuration } = booking;
 
   const { data: master, isLoading: loadingMaster } = useQuery({
     queryKey: ['master', masterId],
@@ -39,8 +40,11 @@ export default function MasterProfilePage() {
 
   const handleToggle = (service: MasterServiceDto) => {
     if (!salonId || !master) return;
-    setSalon(salonId, '');
-    setMaster(masterId!, `${master.firstName} ${master.lastName}`);
+    // Only reset context when switching to a different master; otherwise just toggle
+    if (booking.masterId !== masterId) {
+      setSalon(salonId, '');
+      setMaster(masterId!, `${master.firstName} ${master.lastName}`);
+    }
     toggleService(service);
   };
 

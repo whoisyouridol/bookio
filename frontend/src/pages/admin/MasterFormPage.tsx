@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, Navigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMaster, createMaster, updateMaster, getMasterServices, addMasterService, updateMasterService, removeMasterService } from '@/api/masters';
 import { getServices } from '@/api/services';
@@ -11,10 +11,18 @@ import { resolveMediaUrl } from '@/api/media';
 import { toast } from 'sonner';
 import { Plus, Trash2, Info, Edit2, Check, X } from 'lucide-react';
 import type { MasterServiceDto } from '@/types';
+import { useRole } from '@/contexts/RoleContext';
 
 export default function MasterFormPage() {
   const { masterId } = useParams<{ masterId: string }>();
   const isNew = !masterId || masterId === 'new';
+  const { role, masterId: ownMasterId } = useRole();
+
+  // master_admin can only edit their own profile, not create new masters
+  if (role === 'master_admin') {
+    if (isNew) return <Navigate to="/admin" replace />;
+    if (ownMasterId && masterId !== ownMasterId) return <Navigate to={`/admin/masters/${ownMasterId}`} replace />;
+  }
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

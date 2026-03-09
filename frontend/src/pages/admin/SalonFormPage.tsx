@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, Navigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSalon, createSalon, updateSalon } from '@/api/salons';
 import { Button } from '@/components/ui/Button';
 import { DragDropUpload } from '@/components/ui/DragDropUpload';
 import { Loader } from '@/components/ui/Loader';
 import { toast } from 'sonner';
+import { useRole } from '@/contexts/RoleContext';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -14,6 +15,15 @@ export default function SalonFormPage() {
   const isNew = !salonId || salonId === 'new';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { role, salonId: ownSalonId } = useRole();
+
+  // salon_admin can only edit their own salon, not create new ones
+  if (role === 'salon_admin') {
+    if (isNew) return <Navigate to="/admin" replace />;
+    if (ownSalonId && salonId !== ownSalonId) return <Navigate to={`/admin/salons/${ownSalonId}`} replace />;
+  }
+  // master_admin has no access to salon editing
+  if (role === 'master_admin') return <Navigate to="/admin" replace />;
 
   const { data: existing, isLoading } = useQuery({
     queryKey: ['salon', salonId],

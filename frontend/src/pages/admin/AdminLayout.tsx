@@ -1,25 +1,49 @@
+import type React from 'react';
 import { Outlet, Link, useLocation } from 'react-router';
-import { LayoutDashboard, Building2, Users, Scissors, Calendar } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useRole, type Role } from '@/contexts/RoleContext';
 
-const nav = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/admin/salons', label: 'Salons', icon: Building2 },
-  { to: '/admin/masters', label: 'Masters', icon: Users },
-  { to: '/admin/services', label: 'Services', icon: Scissors },
-  { to: '/admin/bookings', label: 'Bookings', icon: Calendar },
+const allNav: { to: string; label: string; icon: React.ElementType; exact?: boolean; roles: Role[] }[] = [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['superadmin'] },
+  { to: '/admin/salons', label: 'Salons', icon: Building2, roles: ['superadmin'] },
+  { to: '/admin/masters', label: 'Masters', icon: Users, roles: ['superadmin', 'salon_admin', 'master_admin'] },
+  { to: '/admin/services', label: 'Services', icon: Scissors, roles: ['superadmin', 'salon_admin'] },
+  { to: '/admin/bookings', label: 'Bookings', icon: Calendar, roles: ['superadmin', 'salon_admin', 'master_admin'] },
 ];
+
+const ROLE_LABELS: Record<Role, string> = {
+  superadmin: 'Super Admin',
+  salon_admin: 'Salon Admin',
+  master_admin: 'Master',
+  client: 'Client',
+};
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
+  const { role, salonId, masterId } = useRole();
+
+  const nav = allNav
+    .filter(item => item.roles.includes(role))
+    .map(item => {
+      // master_admin → "My Profile" linking directly to their own master form
+      if (item.to === '/admin/masters' && role === 'master_admin' && masterId) {
+        return { ...item, to: `/admin/masters/${masterId}`, label: 'My Profile', icon: UserCircle as React.ElementType };
+      }
+      // salon_admin → "My Salon" linking directly to their salon form
+      if (item.to === '/admin/salons' && role === 'salon_admin' && salonId) {
+        return { ...item, to: `/admin/salons/${salonId}`, label: 'My Salon' };
+      }
+      return item;
+    });
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <aside className="w-56 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10 hidden md:flex">
         <div className="px-5 py-5 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Admin</p>
-          <h1 className="text-lg font-bold text-gray-900 mt-0.5">BookVisit</h1>
+          <h1 className="text-lg font-bold text-gray-900">BookVisit</h1>
+          <p className="text-xs text-gray-400 mt-0.5">{ROLE_LABELS[role]}</p>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {nav.map(({ to, label, icon: Icon, exact }) => {
@@ -42,13 +66,16 @@ export default function AdminLayout() {
           })}
         </nav>
         <div className="px-5 py-4 border-t border-gray-100">
-          <Link to="/" className="text-xs text-gray-400 hover:text-gray-700">← Client view</Link>
+          <Link to="/" className="text-xs text-gray-400 hover:text-gray-700">← Back to client view</Link>
         </div>
       </aside>
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-10 px-4 h-12 flex items-center justify-between">
-        <h1 className="font-bold text-gray-900">BookVisit Admin</h1>
+        <div>
+          <span className="font-bold text-gray-900">BookVisit</span>
+          <span className="ml-2 text-xs text-gray-400">{ROLE_LABELS[role]}</span>
+        </div>
         <Link to="/" className="text-xs text-gray-400">Client →</Link>
       </div>
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10 flex">
