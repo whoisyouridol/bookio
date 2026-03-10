@@ -1,19 +1,21 @@
 import { Calendar, Clock } from 'lucide-react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { getBookings } from '@/api/bookings';
+import { getMyBookings } from '@/api/bookings';
 import { Header } from '@/components/Header';
 import { Badge, bookingStatusBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Loader } from '@/components/ui/Loader';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
 export default function MyBookingsPage() {
-  // In a real app this would filter by the logged-in client's phone/email
-  // For now show all bookings (demo mode)
+  const { isAuthenticated } = useAuth();
+
   const { data: bookings, isLoading } = useQuery({
-    queryKey: ['bookings'],
-    queryFn: () => getBookings(),
+    queryKey: ['my-bookings'],
+    queryFn: getMyBookings,
+    enabled: isAuthenticated,
   });
 
   return (
@@ -21,7 +23,18 @@ export default function MyBookingsPage() {
       <Header title="My Bookings" />
 
       <div className="max-w-md mx-auto px-4 py-6">
-        {isLoading ? (
+        {!isAuthenticated ? (
+          <EmptyState
+            icon={Calendar}
+            title="Sign in to see your bookings"
+            description="Create an account or sign in to track your appointments"
+            action={
+              <Link to="/login" className="text-sm text-[var(--color-primary)] font-medium">
+                Sign in →
+              </Link>
+            }
+          />
+        ) : isLoading ? (
           <Loader />
         ) : !bookings?.length ? (
           <EmptyState

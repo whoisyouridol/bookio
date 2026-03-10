@@ -1,6 +1,7 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -18,6 +19,7 @@ public class RatingsController : ControllerBase
     }
 
     /// <summary>Submit a rating for a master</summary>
+    [AllowAnonymous]
     [HttpPost("api/masters/{masterId:guid}/ratings")]
     public async Task<IActionResult> Create(Guid masterId, [FromBody] CreateRatingRequest req)
     {
@@ -29,10 +31,12 @@ public class RatingsController : ControllerBase
     }
 
     /// <summary>List all ratings for a master</summary>
+    [AllowAnonymous]
     [HttpGet("api/masters/{masterId:guid}/ratings")]
     public async Task<IActionResult> GetByMaster(Guid masterId) => Ok(await _ratingService.GetByMasterAsync(masterId));
 
     /// <summary>Delete a rating</summary>
+    [Authorize]
     [HttpDelete("api/ratings/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

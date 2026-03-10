@@ -1,51 +1,25 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+/**
+ * Compatibility shim — delegates to AuthContext.
+ * All existing components that import from RoleContext continue to work unchanged.
+ */
+import type { ReactNode } from 'react';
+import { AuthProvider, useAuth, type Role } from './AuthContext';
 
-export type Role = 'superadmin' | 'salon_admin' | 'master_admin' | 'client';
+export type { Role };
 
-interface RoleState {
+export interface RoleContextValue {
   role: Role;
   salonId: string | null;
   masterId: string | null;
-}
-
-export interface RoleContextValue extends RoleState {
+  /** No-op — role is derived from the authenticated user's JWT claim. */
   setRole: (role: Role, entityId?: string) => void;
 }
 
-const STORAGE_KEY = 'bookvisit_role';
-
-function loadState(): RoleState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as RoleState;
-  } catch {}
-  return { role: 'superadmin', salonId: null, masterId: null };
-}
-
-const RoleContext = createContext<RoleContextValue | undefined>(undefined);
-
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<RoleState>(loadState);
-
-  const setRole = (role: Role, entityId?: string) => {
-    const next: RoleState = {
-      role,
-      salonId: role === 'salon_admin' ? (entityId ?? null) : null,
-      masterId: role === 'master_admin' ? (entityId ?? null) : null,
-    };
-    setState(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  };
-
-  return (
-    <RoleContext.Provider value={{ ...state, setRole }}>
-      {children}
-    </RoleContext.Provider>
-  );
+  return <AuthProvider>{children}</AuthProvider>;
 }
 
 export function useRole(): RoleContextValue {
-  const ctx = useContext(RoleContext);
-  if (!ctx) throw new Error('useRole must be used within RoleProvider');
-  return ctx;
+  const { role, salonId, masterId } = useAuth();
+  return { role, salonId, masterId, setRole: () => {} };
 }

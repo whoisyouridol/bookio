@@ -1,4 +1,5 @@
 using BeautySalonBooking.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -22,6 +23,7 @@ public class MediaController : ControllerBase
     public MediaController(IStorageService storage) => _storage = storage;
 
     /// <summary>Upload a file. folder = e.g. "salons", "masters", "services"</summary>
+    [Authorize]
     [HttpPost("upload")]
     [RequestSizeLimit(104_857_600)] // 100 MB
     [Consumes("multipart/form-data")]
@@ -45,6 +47,7 @@ public class MediaController : ControllerBase
     }
 
     /// <summary>Redirect to a 24-hour presigned URL for the given object key.</summary>
+    [AllowAnonymous]
     [HttpGet("{**key}")]
     public async Task<IActionResult> Get(string key, CancellationToken ct)
     {

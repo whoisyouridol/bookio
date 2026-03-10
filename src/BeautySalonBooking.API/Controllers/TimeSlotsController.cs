@@ -1,6 +1,7 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -18,6 +19,7 @@ public class TimeSlotsController : ControllerBase
     }
 
     /// <summary>Get available time slots for a master at a salon on a given date</summary>
+    [AllowAnonymous]
     [HttpGet("api/salons/{salonId:guid}/masters/{masterId:guid}/slots")]
     public async Task<IActionResult> GetAvailable(
         Guid salonId, Guid masterId,
@@ -30,6 +32,7 @@ public class TimeSlotsController : ControllerBase
     }
 
     /// <summary>Manually create time slots (batch)</summary>
+    [Authorize]
     [HttpPost("api/salons/{salonId:guid}/masters/{masterId:guid}/slots")]
     public async Task<IActionResult> CreateBatch(Guid salonId, Guid masterId, [FromBody] CreateTimeSlotsRequest req)
     {
@@ -39,6 +42,7 @@ public class TimeSlotsController : ControllerBase
     }
 
     /// <summary>Auto-generate time slots for a date range</summary>
+    [Authorize]
     [HttpPost("api/salons/{salonId:guid}/masters/{masterId:guid}/slots/generate")]
     public async Task<IActionResult> Generate(Guid salonId, Guid masterId, [FromBody] GenerateSlotsRequest req)
     {
@@ -50,6 +54,7 @@ public class TimeSlotsController : ControllerBase
     }
 
     /// <summary>Update slot status (Block/Unblock)</summary>
+    [Authorize]
     [HttpPut("api/slots/{id:guid}")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateSlotStatusRequest req)
     {
@@ -59,6 +64,7 @@ public class TimeSlotsController : ControllerBase
     }
 
     /// <summary>Delete a time slot</summary>
+    [Authorize]
     [HttpDelete("api/slots/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

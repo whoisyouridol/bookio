@@ -1,8 +1,9 @@
 import type React from 'react';
-import { Outlet, Link, useLocation } from 'react-router';
-import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useRole, type Role } from '@/contexts/RoleContext';
+import { useAuth, type Role } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const allNav: { to: string; label: string; icon: React.ElementType; exact?: boolean; roles: Role[] }[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['superadmin'] },
@@ -21,21 +22,30 @@ const ROLE_LABELS: Record<Role, string> = {
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
-  const { role, salonId, masterId } = useRole();
+  const navigate = useNavigate();
+  const { role, salonId, masterId, user, logout } = useAuth();
 
   const nav = allNav
     .filter(item => item.roles.includes(role))
     .map(item => {
-      // master_admin → "My Profile" linking directly to their own master form
       if (item.to === '/admin/masters' && role === 'master_admin' && masterId) {
         return { ...item, to: `/admin/masters/${masterId}`, label: 'My Profile', icon: UserCircle as React.ElementType };
       }
-      // salon_admin → "My Salon" linking directly to their salon form
       if (item.to === '/admin/salons' && role === 'salon_admin' && salonId) {
         return { ...item, to: `/admin/salons/${salonId}`, label: 'My Salon' };
       }
       return item;
     });
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success('Logged out');
+    navigate('/login', { replace: true });
+  };
+
+  const displayName = user
+    ? (user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : user.email)
+    : ROLE_LABELS[role];
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -43,7 +53,8 @@ export default function AdminLayout() {
       <aside className="w-56 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10 hidden md:flex">
         <div className="px-5 py-5 border-b border-gray-100">
           <h1 className="text-lg font-bold text-gray-900">BookVisit</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{ROLE_LABELS[role]}</p>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">{displayName}</p>
+          <p className="text-xs text-gray-400">{ROLE_LABELS[role]}</p>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {nav.map(({ to, label, icon: Icon, exact }) => {
@@ -65,8 +76,17 @@ export default function AdminLayout() {
             );
           })}
         </nav>
-        <div className="px-5 py-4 border-t border-gray-100">
-          <Link to="/" className="text-xs text-gray-400 hover:text-gray-700">← Back to client view</Link>
+        <div className="px-3 py-4 border-t border-gray-100 space-y-1">
+          <Link to="/" className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors">
+            ← Back to client view
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Log out
+          </button>
         </div>
       </aside>
 
@@ -76,7 +96,12 @@ export default function AdminLayout() {
           <span className="font-bold text-gray-900">BookVisit</span>
           <span className="ml-2 text-xs text-gray-400">{ROLE_LABELS[role]}</span>
         </div>
-        <Link to="/" className="text-xs text-gray-400">Client →</Link>
+        <div className="flex items-center gap-3">
+          <Link to="/" className="text-xs text-gray-400">Client →</Link>
+          <button onClick={handleLogout} className="text-xs text-red-500">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10 flex">
         {nav.map(({ to, label, icon: Icon, exact }) => {

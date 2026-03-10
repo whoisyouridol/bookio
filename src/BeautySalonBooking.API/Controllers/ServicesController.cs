@@ -1,5 +1,6 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -13,10 +14,12 @@ public class ServicesController : ControllerBase
     public ServicesController(CatalogService service) => _service = service;
 
     /// <summary>List all services in global catalog</summary>
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
 
     /// <summary>Create a new service in the catalog</summary>
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateServiceRequest req)
     {
@@ -26,6 +29,7 @@ public class ServicesController : ControllerBase
     }
 
     /// <summary>Update a catalog service</summary>
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateServiceRequest req)
     {
@@ -35,6 +39,7 @@ public class ServicesController : ControllerBase
     }
 
     /// <summary>Delete a catalog service</summary>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

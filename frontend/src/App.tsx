@@ -1,6 +1,12 @@
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { RoleGuard } from '@/router/RoleGuard';
 
+// Auth pages
+import LoginPage from '@/pages/auth/LoginPage';
+import RegisterPage from '@/pages/auth/RegisterPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
+
 // Client layout + pages
 import ClientRoot from '@/pages/client/Root';
 import HomePage from '@/pages/client/HomePage';
@@ -23,6 +29,12 @@ import BookingsAdminPage from '@/pages/admin/BookingsAdminPage';
 import BookingDetailAdminPage from '@/pages/admin/BookingDetailAdminPage';
 
 const router = createBrowserRouter([
+  // ── Auth routes ────────────────────────────────────────────────────────────
+  { path: '/login', Component: LoginPage },
+  { path: '/register', Component: RegisterPage },
+  { path: '/auth/forgot-password', Component: ForgotPasswordPage },
+  { path: '/auth/reset-password', Component: ResetPasswordPage },
+
   // ── Client routes ──────────────────────────────────────────────────────────
   {
     path: '/',
@@ -40,9 +52,8 @@ const router = createBrowserRouter([
   // ── Admin routes ───────────────────────────────────────────────────────────
   {
     path: '/admin',
-    // Clients are never allowed into admin — redirect to homepage
     element: (
-      <RoleGuard allow={['superadmin', 'salon_admin', 'master_admin']} redirect="/">
+      <RoleGuard allow={['superadmin', 'salon_admin', 'master_admin']} redirect="/login">
         <AdminLayout />
       </RoleGuard>
     ),
@@ -63,7 +74,6 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Salons list: only superadmin; salon_admin redirects to their own salon, master_admin to dashboard
       {
         path: 'salons',
         element: (
@@ -78,11 +88,9 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Salon form: superadmin unrestricted; salon_admin only their own (guard inside page)
       { path: 'salons/new', element: <SalonFormPage /> },
       { path: 'salons/:salonId', element: <SalonFormPage /> },
 
-      // Masters list: superadmin + salon_admin; master_admin redirects to own profile
       {
         path: 'masters',
         element: (
@@ -97,7 +105,6 @@ const router = createBrowserRouter([
         ),
       },
 
-      // Master form: superadmin + salon_admin can create; master_admin only their own (guard inside page)
       { path: 'masters/new', element: <MasterFormPage /> },
       { path: 'masters/:masterId', element: <MasterFormPage /> },
 

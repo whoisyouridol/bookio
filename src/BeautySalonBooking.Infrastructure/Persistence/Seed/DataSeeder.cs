@@ -1,14 +1,23 @@
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
+using BeautySalonBooking.Infrastructure.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace BeautySalonBooking.Infrastructure.Persistence.Seed;
 
 public static class DataSeeder
 {
-    public static async Task SeedAsync(AppDbContext context, ILogger logger)
+    public static async Task SeedAsync(
+        AppDbContext context,
+        UserManager<AppUser> userManager,
+        IConfiguration configuration,
+        ILogger logger)
     {
+        await SeedSuperAdminsAsync(userManager, configuration, logger);
+
         if (await context.Salons.AnyAsync()) return;
 
         // --- Services ---
@@ -171,5 +180,45 @@ public static class DataSeeder
 
         await context.SaveChangesAsync();
         logger.LogInformation("Seed data applied successfully.");
+    }
+
+    private static async Task SeedSuperAdminsAsync(
+        UserManager<AppUser> userManager,
+        IConfiguration configuration,
+        ILogger logger)
+    {
+        var admins = configuration.GetSection("SuperAdmins").Get<List<SuperAdminSeedEntry>>();
+        if (admins == null || admins.Count == 0) return;
+
+        foreach (var entry in admins)
+        {
+            var existing = await userManager.FindByEmailAsync(entry.Email);
+            if (existing != null) continue;
+
+            var user = new AppUser
+            {
+                UserName = entry.Email,
+                Email = entry.Email,
+                EmailConfirmed = true,
+                FirstName = entry.FirstName ?? "Super",
+                LastName = entry.LastName ?? "Admin",
+                Role = Domain.Enums.AppRole.SuperAdmin,
+            };
+
+            var result = await userManager.CreateAsync(user, entry.Password);
+            if (result.Succeeded)
+                logger.LogInformation("SuperAdmin seeded: {Email}", entry.Email);
+            else
+                logger.LogWarning("Failed to seed SuperAdmin {Email}: {Errors}",
+                    entry.Email, string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    private class SuperAdminSeedEntry
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
     }
 }

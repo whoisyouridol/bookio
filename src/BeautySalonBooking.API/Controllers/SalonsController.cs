@@ -1,6 +1,7 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -23,10 +24,12 @@ public class SalonsController : ControllerBase
     }
 
     /// <summary>List all active salons</summary>
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _salonService.GetAllAsync());
 
     /// <summary>Get salon details with masters</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -35,6 +38,7 @@ public class SalonsController : ControllerBase
     }
 
     /// <summary>Create a new salon</summary>
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSalonRequest req)
     {
@@ -45,6 +49,7 @@ public class SalonsController : ControllerBase
     }
 
     /// <summary>Update salon info</summary>
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSalonRequest req)
     {
@@ -55,6 +60,7 @@ public class SalonsController : ControllerBase
     }
 
     /// <summary>Soft-delete salon</summary>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -63,10 +69,12 @@ public class SalonsController : ControllerBase
     }
 
     /// <summary>Get all masters at this salon</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}/masters")]
     public async Task<IActionResult> GetMasters(Guid id) => Ok(await _salonService.GetMastersAsync(id));
 
     /// <summary>Get all services available at this salon</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}/services")]
     public async Task<IActionResult> GetServices(Guid id) => Ok(await _salonService.GetServicesAsync(id));
 }

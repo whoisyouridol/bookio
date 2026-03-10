@@ -12,6 +12,7 @@ import { BookingSummary } from '@/components/booking/BookingSummary';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import { useBooking } from '@/context/BookingContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { TimeSlotDto } from '@/types';
 
@@ -21,13 +22,16 @@ export default function BookingFlowPage() {
   const { salonId, masterId } = useParams<{ salonId: string; masterId: string }>();
   const navigate = useNavigate();
   const booking = useBooking();
+  const { user } = useAuth();
 
   const [step, setStep] = useState<Step>('datetime');
   const [selectedDate, setSelectedDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
   const [selectedSlot, setSelectedSlot] = useState<TimeSlotDto | null>(null);
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
+  const [clientName, setClientName] = useState(
+    user ? [user.firstName, user.lastName].filter(Boolean).join(' ') : ''
+  );
+  const [clientPhone, setClientPhone] = useState(user?.phone ?? '');
+  const [clientEmail, setClientEmail] = useState(user?.email ?? '');
 
   const { data: salon } = useQuery({ queryKey: ['salon', salonId], queryFn: () => getSalon(salonId!), enabled: !!salonId });
   const { data: master } = useQuery({ queryKey: ['master', masterId], queryFn: () => getMaster(masterId!), enabled: !!masterId });

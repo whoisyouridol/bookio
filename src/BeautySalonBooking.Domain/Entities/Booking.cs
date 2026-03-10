@@ -7,6 +7,7 @@ public class Booking
     public Guid Id { get; set; }
     public Guid SalonId { get; set; }
     public Guid MasterId { get; set; }
+    public Guid? UserId { get; set; }
     public string ClientName { get; set; } = string.Empty;
     public string ClientPhone { get; set; } = string.Empty;
     public string? ClientEmail { get; set; }

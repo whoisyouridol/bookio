@@ -21,4 +21,10 @@ public interface INotificationService
 
     /// <summary>Reminder sent two hours before the appointment.</summary>
     Task SendReminderTwoHoursBeforeAsync(Guid bookingId);
+
+    /// <summary>Sends a password-reset link to the user's email.</summary>
+    Task SendPasswordResetAsync(string email, string resetToken);
+
+    /// <summary>Notifies the user that their password was changed successfully.</summary>
+    Task SendPasswordChangedAsync(string email);
 }

@@ -1,4 +1,5 @@
 using BeautySalonBooking.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -18,15 +19,34 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Provide minimal JWT config so TokenService doesn't throw on startup
+        builder.UseSetting("Jwt:Secret", "test-secret-key-that-is-at-least-32-chars-long!");
+        builder.UseSetting("Jwt:Issuer", "TestIssuer");
+        builder.UseSetting("Jwt:Audience", "TestAudience");
+
         builder.ConfigureServices(services =>
         {
-            // Replace the real DbContext registration with one pointing to the test container
+            // Replace real DbContext with test container
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
             if (descriptor != null) services.Remove(descriptor);
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(_postgres.GetConnectionString()));
+
+            // Register the test auth handler
+            services.AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", null);
+
+            // PostConfigure runs AFTER all regular Configure calls, overriding the JWT defaults
+            services.PostConfigureAll<AuthenticationOptions>(options =>
+            {
+                options.DefaultAuthenticateScheme = "Test";
+                options.DefaultChallengeScheme = "Test";
+                options.DefaultForbidScheme = "Test";
+                options.DefaultSignInScheme = "Test";
+                options.DefaultSignOutScheme = "Test";
+            });
         });
     }
 

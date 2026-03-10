@@ -1,10 +1,12 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/salons/{salonId:guid}/masters")]
 public class SalonMastersController : ControllerBase
 {

@@ -44,4 +44,16 @@ public class NotificationService : INotificationService
         _logger.LogInformation("TODO: Send 2-hour reminder for {BookingId}", bookingId);
         return Task.CompletedTask;
     }
+
+    public Task SendPasswordResetAsync(string email, string resetToken)
+    {
+        _logger.LogInformation("TODO: Send password-reset link to {Email} — token: {Token}", email, resetToken);
+        return Task.CompletedTask;
+    }
+
+    public Task SendPasswordChangedAsync(string email)
+    {
+        _logger.LogInformation("TODO: Notify {Email} that their password was changed", email);
+        return Task.CompletedTask;
+    }
 }

@@ -50,7 +50,19 @@ public class BookingService
         return b == null ? null : MapToDto(b);
     }
 
-    public async Task<(BookingDto? result, string? error)> CreateAsync(CreateBookingRequest req)
+    public async Task<List<BookingDto>> GetMyBookingsAsync(Guid userId)
+    {
+        var bookings = await _db.Bookings
+            .Include(b => b.Salon)
+            .Include(b => b.Master)
+            .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
+            .Where(b => b.UserId == userId)
+            .OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime)
+            .ToListAsync();
+        return bookings.Select(MapToDto).ToList();
+    }
+
+    public async Task<(BookingDto? result, string? error)> CreateAsync(CreateBookingRequest req, Guid? userId = null)
     {
         if (!DateOnly.TryParse(req.BookingDate, out var date))
             return (null, "Invalid booking date");
@@ -111,6 +123,7 @@ public class BookingService
             Id = Guid.NewGuid(),
             SalonId = req.SalonId,
             MasterId = req.MasterId,
+            UserId = userId,
             ClientName = req.ClientName,
             ClientPhone = req.ClientPhone,
             ClientEmail = req.ClientEmail,

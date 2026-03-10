@@ -4,6 +4,9 @@ import apiClient from './client';
 export const getBookings = (filters?: BookingFilters) =>
   apiClient.get<BookingDto[]>('/bookings', { params: filters }).then(r => r.data);
 
+export const getMyBookings = () =>
+  apiClient.get<BookingDto[]>('/bookings/my').then(r => r.data);
+
 export const getBooking = (id: string) =>
   apiClient.get<BookingDto>(`/bookings/${id}`).then(r => r.data);
 

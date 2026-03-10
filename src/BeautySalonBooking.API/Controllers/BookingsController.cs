@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -23,6 +25,7 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>List all bookings with optional filters</summary>
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] Guid? salonId, [FromQuery] Guid? masterId,
@@ -33,6 +36,7 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>Get booking details</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -40,18 +44,32 @@ public class BookingsController : ControllerBase
         return booking == null ? NotFound() : Ok(booking);
     }
 
+    /// <summary>Get bookings for the currently authenticated user</summary>
+    [Authorize]
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMy()
+    {
+        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (!Guid.TryParse(sub, out var userId)) return Unauthorized();
+        return Ok(await _bookingService.GetMyBookingsAsync(userId));
+    }
+
     /// <summary>Create a new booking</summary>
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest req)
     {
         var validation = await _createValidator.ValidateAsync(req);
         if (!validation.IsValid) return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
-        var (result, error) = await _bookingService.CreateAsync(req);
+        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        Guid? userId = Guid.TryParse(sub, out var uid) ? uid : null;
+        var (result, error) = await _bookingService.CreateAsync(req, userId);
         if (error != null) return BadRequest(new { error });
         return CreatedAtAction(nameof(GetById), new { id = result!.Id }, result);
     }
 
     /// <summary>Confirm a pending booking</summary>
+    [Authorize]
     [HttpPut("{id:guid}/confirm")]
     public async Task<IActionResult> Confirm(Guid id)
     {
@@ -61,6 +79,7 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>Mark booking as completed</summary>
+    [Authorize]
     [HttpPut("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id)
     {
@@ -70,6 +89,7 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>Cancel a booking with side and reason</summary>
+    [Authorize]
     [HttpPut("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, [FromBody] CancelBookingRequest req)
     {
@@ -90,6 +110,7 @@ public class SalonBookingsController : ControllerBase
     public SalonBookingsController(BookingService bookingService) => _bookingService = bookingService;
 
     /// <summary>Get bookings for a specific salon</summary>
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetBySalon(Guid salonId) => Ok(await _bookingService.GetBySalonAsync(salonId));
 }
@@ -103,6 +124,7 @@ public class MasterBookingsController : ControllerBase
     public MasterBookingsController(BookingService bookingService) => _bookingService = bookingService;
 
     /// <summary>Get bookings for a specific master</summary>
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetByMaster(Guid masterId) => Ok(await _bookingService.GetByMasterAsync(masterId));
 }

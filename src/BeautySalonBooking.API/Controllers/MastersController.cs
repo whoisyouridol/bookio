@@ -1,6 +1,7 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeautySalonBooking.API.Controllers;
@@ -23,10 +24,12 @@ public class MastersController : ControllerBase
     }
 
     /// <summary>List all active masters</summary>
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _masterService.GetAllAsync());
 
     /// <summary>Get master details with average rating</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -35,6 +38,7 @@ public class MastersController : ControllerBase
     }
 
     /// <summary>Create a new master</summary>
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMasterRequest req)
     {
@@ -45,6 +49,7 @@ public class MastersController : ControllerBase
     }
 
     /// <summary>Update master info</summary>
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMasterRequest req)
     {
@@ -55,6 +60,7 @@ public class MastersController : ControllerBase
     }
 
     /// <summary>Soft-delete master</summary>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -63,10 +69,12 @@ public class MastersController : ControllerBase
     }
 
     /// <summary>Get services offered by this master</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}/services")]
     public async Task<IActionResult> GetServices(Guid id) => Ok(await _masterService.GetServicesAsync(id));
 
     /// <summary>Get master's average rating</summary>
+    [AllowAnonymous]
     [HttpGet("{id:guid}/average-rating")]
     public async Task<IActionResult> GetAverageRating(Guid id) => Ok(await _masterService.GetAverageRatingAsync(id));
 }

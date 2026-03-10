@@ -233,6 +233,40 @@ export interface AverageRatingDto {
   count: number;
 }
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export interface UserDto {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  /** 'SuperAdmin' | 'SalonAdmin' | 'MasterAdmin' | 'Client' */
+  role: string;
+  salonId?: string;
+  masterId?: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  user: UserDto;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  /** 'Client' | 'SalonAdmin' | 'MasterAdmin' */
+  role?: string;
+}
+
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 export interface SalonTheme {
