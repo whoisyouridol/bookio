@@ -42,6 +42,7 @@ export interface MasterDto {
   phone: string;
   photo?: string;
   description?: string;
+  autoApproveBookings: boolean;
   isActive: boolean;
   createdAt: string;
   averageRating?: number;
@@ -54,6 +55,7 @@ export interface CreateMasterRequest {
   phone: string;
   photo?: string;
   description?: string;
+  autoApproveBookings: boolean;
 }
 
 export type UpdateMasterRequest = CreateMasterRequest;

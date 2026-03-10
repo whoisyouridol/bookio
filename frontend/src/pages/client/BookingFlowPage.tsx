@@ -5,7 +5,7 @@ import { format, addDays, startOfDay } from 'date-fns';
 import { getSalon } from '@/api/salons';
 import { getMaster } from '@/api/masters';
 import { getAvailableSlots } from '@/api/timeslots';
-import { createBooking, confirmBooking } from '@/api/bookings';
+import { createBooking } from '@/api/bookings';
 import { Header } from '@/components/Header';
 import { TimeSlotGrid } from '@/components/booking/TimeSlotGrid';
 import { BookingSummary } from '@/components/booking/BookingSummary';
@@ -52,8 +52,6 @@ export default function BookingFlowPage() {
         startTime: selectedSlot!.startTime,
         serviceIds: serviceIds,
       });
-      // Auto-confirm as per business rules
-      await confirmBooking(created.id);
       return created;
     },
     onSuccess: created => {

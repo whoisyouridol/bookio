@@ -7,14 +7,29 @@ public class NotificationService : INotificationService
 {
     private readonly ILogger<NotificationService> _logger;
 
-    public NotificationService(ILogger<NotificationService> logger)
+    public NotificationService(ILogger<NotificationService> logger) => _logger = logger;
+
+    public Task SendBookingPendingApprovalAsync(Guid bookingId)
     {
-        _logger = logger;
+        _logger.LogInformation("TODO: Notify master — booking {BookingId} awaits approval", bookingId);
+        return Task.CompletedTask;
     }
 
-    public Task SendBookingConfirmationAsync(Guid bookingId)
+    public Task SendBookingConfirmedAsync(Guid bookingId)
     {
-        _logger.LogInformation("TODO: Send booking confirmation for {BookingId}", bookingId);
+        _logger.LogInformation("TODO: Notify client — booking {BookingId} confirmed", bookingId);
+        return Task.CompletedTask;
+    }
+
+    public Task SendBookingCancelledAsync(Guid bookingId, CancellationSide cancelledBy)
+    {
+        _logger.LogInformation("TODO: Notify both parties — booking {BookingId} cancelled by {Side}", bookingId, cancelledBy);
+        return Task.CompletedTask;
+    }
+
+    public Task SendBookingCompletedAsync(Guid bookingId)
+    {
+        _logger.LogInformation("TODO: Notify client — booking {BookingId} completed", bookingId);
         return Task.CompletedTask;
     }
 
@@ -27,12 +42,6 @@ public class NotificationService : INotificationService
     public Task SendReminderTwoHoursBeforeAsync(Guid bookingId)
     {
         _logger.LogInformation("TODO: Send 2-hour reminder for {BookingId}", bookingId);
-        return Task.CompletedTask;
-    }
-
-    public Task SendCancellationNotificationAsync(Guid bookingId, CancellationSide side)
-    {
-        _logger.LogInformation("TODO: Send cancellation notification for {BookingId}, cancelled by {Side}", bookingId, side);
         return Task.CompletedTask;
     }
 }

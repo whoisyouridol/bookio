@@ -41,6 +41,7 @@ public class MasterService
             Phone = req.Phone,
             Photo = req.Photo,
             Description = req.Description,
+            AutoApproveBookings = req.AutoApproveBookings,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -59,6 +60,7 @@ public class MasterService
         master.Phone = req.Phone;
         master.Photo = req.Photo;
         master.Description = req.Description;
+        master.AutoApproveBookings = req.AutoApproveBookings;
         master.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -107,6 +109,6 @@ public class MasterService
     private static MasterDto MapToDto(Master m)
     {
         var avg = m.Ratings.Any() ? (double?)m.Ratings.Average(r => r.Rating) : null;
-        return new MasterDto(m.Id, m.FirstName, m.LastName, m.Phone, m.Photo, m.Description, m.IsActive, m.CreatedAt, avg, m.Ratings.Count);
+        return new MasterDto(m.Id, m.FirstName, m.LastName, m.Phone, m.Photo, m.Description, m.AutoApproveBookings, m.IsActive, m.CreatedAt, avg, m.Ratings.Count);
     }
 }

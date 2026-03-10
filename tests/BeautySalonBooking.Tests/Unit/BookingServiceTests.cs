@@ -15,38 +15,38 @@ public class BookingServiceTests
     private BookingService BuildService(InMemoryDbHelper.Ctx ctx) =>
         new(ctx.Db, _notifMock.Object);
 
-    // Helper to set up a full bookable scenario
+    // Helper — sets up a full bookable scenario with auto-approve ON (default)
     private async Task<(
         InMemoryDbHelper.Ctx ctx,
         BookingService svc,
         Guid salonId, Guid masterId,
         Guid serviceId, Guid salonMasterId,
         DateOnly date, TimeOnly slotStart)>
-        SetupBookableScenarioAsync()
+        SetupBookableScenarioAsync(bool autoApprove = true)
     {
         var ctx = InMemoryDbHelper.CreateCtx();
         var svc = BuildService(ctx);
 
         var salon = await TestData.CreateSalonAsync(ctx.Db);
-        var master = await TestData.CreateMasterAsync(ctx.Db);
+        var master = await TestData.CreateMasterAsync(ctx.Db, autoApproveBookings: autoApprove);
         var sm = await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id);
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, price: 1500, duration: 60);
 
-        var date = new DateOnly(2026, 3, 9); // Monday
+        var date = new DateOnly(2026, 3, 9);
         var start = new TimeOnly(10, 0);
         await TestData.CreateSlotsAsync(ctx.Db, sm.Id, date, start, start.AddMinutes(120), 60);
 
         return (ctx, svc, salon.Id, master.Id, service.Id, sm.Id, date, start);
     }
 
-    // ── Create ──────────────────────────────────────────────────────────────
+    // ── Create — auto-approve ON ─────────────────────────────────────────────
 
     [Fact]
-    public async Task Create_Succeeds_WhenSlotsAvailable()
+    public async Task Create_AutoApproveOn_ReturnsConfirmedStatus()
     {
-        var (ctx, svc, salonId, masterId, serviceId, smId, date, start) =
-            await SetupBookableScenarioAsync();
+        var (_, svc, salonId, masterId, serviceId, _, date, start) =
+            await SetupBookableScenarioAsync(autoApprove: true);
 
         var req = new CreateBookingRequest(salonId, masterId, "Alice", "+79991234567", null,
             date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
@@ -54,10 +54,56 @@ public class BookingServiceTests
         var (result, error) = await svc.CreateAsync(req);
 
         error.Should().BeNull();
-        result.Should().NotBeNull();
-        result!.TotalPrice.Should().Be(1500);
+        result!.Status.Should().Be("Confirmed");
+        result.TotalPrice.Should().Be(1500);
         result.TotalDurationMinutes.Should().Be(60);
-        result.Status.Should().Be("Pending");
+    }
+
+    [Fact]
+    public async Task Create_AutoApproveOn_NotifiesClientConfirmed()
+    {
+        var (_, svc, salonId, masterId, serviceId, _, date, start) =
+            await SetupBookableScenarioAsync(autoApprove: true);
+
+        var req = new CreateBookingRequest(salonId, masterId, "Alice", "+79991234567", null,
+            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
+
+        var (result, _) = await svc.CreateAsync(req);
+
+        _notifMock.Verify(n => n.SendBookingConfirmedAsync(result!.Id), Times.Once);
+        _notifMock.Verify(n => n.SendBookingPendingApprovalAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    // ── Create — auto-approve OFF ────────────────────────────────────────────
+
+    [Fact]
+    public async Task Create_AutoApproveOff_ReturnsPendingStatus()
+    {
+        var (_, svc, salonId, masterId, serviceId, _, date, start) =
+            await SetupBookableScenarioAsync(autoApprove: false);
+
+        var req = new CreateBookingRequest(salonId, masterId, "Bob", "+79990000000", null,
+            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
+
+        var (result, error) = await svc.CreateAsync(req);
+
+        error.Should().BeNull();
+        result!.Status.Should().Be("Pending");
+    }
+
+    [Fact]
+    public async Task Create_AutoApproveOff_NotifiesMasterPendingApproval()
+    {
+        var (_, svc, salonId, masterId, serviceId, _, date, start) =
+            await SetupBookableScenarioAsync(autoApprove: false);
+
+        var req = new CreateBookingRequest(salonId, masterId, "Bob", "+79990000000", null,
+            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
+
+        var (result, _) = await svc.CreateAsync(req);
+
+        _notifMock.Verify(n => n.SendBookingPendingApprovalAsync(result!.Id), Times.Once);
+        _notifMock.Verify(n => n.SendBookingConfirmedAsync(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
@@ -74,20 +120,6 @@ public class BookingServiceTests
         ctx.Db.TimeSlots
             .Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime == start)
             .First().Status.Should().Be(TimeSlotStatus.Booked);
-    }
-
-    [Fact]
-    public async Task Create_CallsNotificationService()
-    {
-        var (ctx, svc, salonId, masterId, serviceId, _, date, start) =
-            await SetupBookableScenarioAsync();
-
-        var req = new CreateBookingRequest(salonId, masterId, "Carol", "+70000000001", null,
-            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
-
-        var (result, _) = await svc.CreateAsync(req);
-
-        _notifMock.Verify(n => n.SendBookingConfirmationAsync(result!.Id), Times.Once);
     }
 
     [Fact]
@@ -147,7 +179,6 @@ public class BookingServiceTests
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, duration: 120);
 
-        // Only 1 slot (60 min) but service needs 120 min
         await TestData.CreateSlotsAsync(ctx.Db, sm.Id, new DateOnly(2026, 3, 9),
             new TimeOnly(10, 0), new TimeOnly(11, 0), 60);
 
@@ -190,6 +221,20 @@ public class BookingServiceTests
     }
 
     [Fact]
+    public async Task Confirm_NotifiesClientConfirmed()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new BookingService(db, _notifMock.Object);
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);
+
+        var (result, _) = await svc.ConfirmAsync(booking.Id);
+
+        _notifMock.Verify(n => n.SendBookingConfirmedAsync(result!.Id), Times.Once);
+    }
+
+    [Fact]
     public async Task Confirm_Fails_WhenAlreadyConfirmed()
     {
         var db = InMemoryDbHelper.Create();
@@ -220,7 +265,6 @@ public class BookingServiceTests
         var svc = new BookingService(db, _notifMock.Object);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
-        // Past date/time → end time has passed
         var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2));
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id,
             BookingStatus.Confirmed, date: pastDate, start: new TimeOnly(9, 0));
@@ -230,6 +274,22 @@ public class BookingServiceTests
         error.Should().BeNull();
         result!.Status.Should().Be("Completed");
         result.CompletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Complete_NotifiesClientCompleted()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new BookingService(db, _notifMock.Object);
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2));
+        var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id,
+            BookingStatus.Confirmed, date: pastDate, start: new TimeOnly(9, 0));
+
+        var (result, _) = await svc.CompleteAsync(booking.Id);
+
+        _notifMock.Verify(n => n.SendBookingCompletedAsync(result!.Id), Times.Once);
     }
 
     [Fact]
@@ -297,27 +357,7 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public async Task Cancel_ReleasesBookedSlots()
-    {
-        var (ctx, svc, salonId, masterId, serviceId, smId, date, start) =
-            await SetupBookableScenarioAsync();
-
-        // Create and confirm booking (slots become Booked)
-        var req = new CreateBookingRequest(salonId, masterId, "Harry", "+70000000005", null,
-            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
-        var (booking, _) = await svc.CreateAsync(req);
-        await svc.ConfirmAsync(booking!.Id);
-
-        // Cancel it
-        await svc.CancelAsync(booking.Id, new CancelBookingRequest("Client", null));
-
-        ctx.Db.TimeSlots
-            .Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime == start)
-            .First().Status.Should().Be(TimeSlotStatus.Available);
-    }
-
-    [Fact]
-    public async Task Cancel_CallsNotificationService()
+    public async Task Cancel_NotifiesBothParties()
     {
         var db = InMemoryDbHelper.Create();
         var svc = new BookingService(db, _notifMock.Object);
@@ -327,8 +367,24 @@ public class BookingServiceTests
 
         var (result, _) = await svc.CancelAsync(booking.Id, new CancelBookingRequest("Client", null));
 
-        _notifMock.Verify(n => n.SendCancellationNotificationAsync(
-            booking.Id, CancellationSide.Client), Times.Once);
+        _notifMock.Verify(n => n.SendBookingCancelledAsync(booking.Id, CancellationSide.Client), Times.Once);
+    }
+
+    [Fact]
+    public async Task Cancel_ReleasesBookedSlots()
+    {
+        var (ctx, svc, salonId, masterId, serviceId, smId, date, start) =
+            await SetupBookableScenarioAsync();
+
+        var req = new CreateBookingRequest(salonId, masterId, "Harry", "+70000000005", null,
+            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
+        var (booking, _) = await svc.CreateAsync(req);
+
+        await svc.CancelAsync(booking!.Id, new CancelBookingRequest("Client", null));
+
+        ctx.Db.TimeSlots
+            .Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime == start)
+            .First().Status.Should().Be(TimeSlotStatus.Available);
     }
 
     [Fact]

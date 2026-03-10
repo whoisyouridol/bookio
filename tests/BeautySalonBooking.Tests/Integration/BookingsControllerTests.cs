@@ -11,7 +11,7 @@ public class BookingsControllerTests : IntegrationTestBase
 
     // Full setup: salon → master → link → service → master-service → slots
     private async Task<(string salonId, string masterId, string serviceId)> FullSetupAsync(
-        string date = "2026-05-04") // Monday
+        string date = "2026-05-04", bool autoApproveBookings = true) // Monday
     {
         var (salon, _) = await PostAsync<JsonElement>("/api/salons", new
         {
@@ -20,7 +20,7 @@ public class BookingsControllerTests : IntegrationTestBase
             workingDays = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" }
         });
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { firstName = "Book", lastName = "Master", phone = "+70001110000" });
+            new { firstName = "Book", lastName = "Master", phone = "+70001110000", autoApproveBookings });
         var salonId = salon.GetProperty("id").GetString()!;
         var masterId = master.GetProperty("id").GetString()!;
 
@@ -63,7 +63,7 @@ public class BookingsControllerTests : IntegrationTestBase
 
         status.Should().Be(HttpStatusCode.Created);
         result.GetProperty("totalPrice").GetDecimal().Should().Be(2000);
-        result.GetProperty("status").GetString().Should().Be("Pending");
+        result.GetProperty("status").GetString().Should().Be("Confirmed");
         result.GetProperty("totalDurationMinutes").GetInt32().Should().Be(60);
     }
 
@@ -170,7 +170,7 @@ public class BookingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullFlow_Create_Confirm_Cancel()
     {
-        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-11");
+        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-11", autoApproveBookings: false);
         var (created, _) = await PostAsync<JsonElement>("/api/bookings",
             BookingBody(salonId, masterId, serviceId, "2026-05-11"));
         var id = created.GetProperty("id").GetString();

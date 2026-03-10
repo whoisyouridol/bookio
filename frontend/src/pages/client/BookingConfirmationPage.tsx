@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router';
-import { CheckCircle2, Calendar, Clock, MapPin, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Clock3, Calendar, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getBooking } from '@/api/bookings';
 import { Header } from '@/components/Header';
@@ -20,19 +20,29 @@ export default function BookingConfirmationPage() {
   if (!booking) return <div className="p-6 text-center text-[var(--color-text-secondary)]">Booking not found.</div>;
 
   const dateLabel = format(new Date(booking.bookingDate), 'EEEE, MMMM d, yyyy');
+  const isPending = booking.status === 'Pending';
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
-      <Header title="Booking Confirmed" />
+      <Header title={isPending ? 'Booking Requested' : 'Booking Confirmed'} />
 
       <div className="max-w-md mx-auto px-4 py-8 space-y-6">
         {/* Success banner */}
         <div className="text-center py-4">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-10 h-10 text-green-500" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isPending ? 'bg-yellow-100' : 'bg-green-100'}`}>
+            {isPending
+              ? <Clock3 className="w-10 h-10 text-yellow-500" />
+              : <CheckCircle2 className="w-10 h-10 text-green-500" />}
           </div>
-          <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">You're booked!</h2>
+          <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
+            {isPending ? 'Awaiting approval' : "You're booked!"}
+          </h2>
           <p className="text-[var(--color-text-secondary)]">
+            {isPending
+              ? 'The master will confirm your booking shortly.'
+              : 'Your appointment is confirmed.'}
+          </p>
+          <p className="text-[var(--color-text-secondary)] mt-1 text-sm">
             Booking <span className="font-mono font-medium text-xs">{booking.id.slice(0, 8).toUpperCase()}</span>
           </p>
         </div>
@@ -66,7 +76,7 @@ export default function BookingConfirmationPage() {
                 {Number(booking.totalPrice).toLocaleString()} ₾
               </p>
             </div>
-            <span className="text-xs font-medium px-3 py-1 rounded-full bg-green-100 text-green-700">
+            <span className={`text-xs font-medium px-3 py-1 rounded-full ${isPending ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
               {booking.status}
             </span>
           </div>

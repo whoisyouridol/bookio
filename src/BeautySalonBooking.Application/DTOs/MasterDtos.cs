@@ -7,6 +7,7 @@ public record MasterDto(
     string Phone,
     string? Photo,
     string? Description,
+    bool AutoApproveBookings,
     bool IsActive,
     DateTime CreatedAt,
     double? AverageRating,
@@ -18,7 +19,8 @@ public record CreateMasterRequest(
     string LastName,
     string Phone,
     string? Photo,
-    string? Description
+    string? Description,
+    bool AutoApproveBookings = true
 );
 
 public record UpdateMasterRequest(
@@ -26,5 +28,6 @@ public record UpdateMasterRequest(
     string LastName,
     string Phone,
     string? Photo,
-    string? Description
+    string? Description,
+    bool AutoApproveBookings = true
 );

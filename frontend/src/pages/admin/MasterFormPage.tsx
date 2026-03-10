@@ -45,6 +45,7 @@ export default function MasterFormPage() {
   const [phone, setPhone] = useState('');
   const [photoKeys, setPhotoKeys] = useState<string[]>([]);
   const [description, setDescription] = useState('');
+  const [autoApproveBookings, setAutoApproveBookings] = useState(true);
 
   // Add-service form
   const [addServiceId, setAddServiceId] = useState('');
@@ -68,6 +69,7 @@ export default function MasterFormPage() {
       setPhone(existing.phone);
       setPhotoKeys(existing.photo ? [existing.photo] : []);
       setDescription(existing.description ?? '');
+      setAutoApproveBookings(existing.autoApproveBookings);
     }
   }, [existing]);
 
@@ -87,7 +89,7 @@ export default function MasterFormPage() {
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const payload = { firstName, lastName, phone, photo: photoKeys[0] || undefined, description: description || undefined };
+      const payload = { firstName, lastName, phone, photo: photoKeys[0] || undefined, description: description || undefined, autoApproveBookings };
       return isNew ? createMaster(payload) : updateMaster(masterId!, payload);
     },
     onSuccess: () => {
@@ -163,6 +165,22 @@ export default function MasterFormPage() {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none"
           />
         </div>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoApproveBookings}
+            onChange={e => setAutoApproveBookings(e.target.checked)}
+            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+          />
+          <span>
+            <span className="text-sm font-medium text-gray-700">Auto-approve bookings</span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              {autoApproveBookings
+                ? 'New bookings are confirmed automatically.'
+                : 'New bookings require manual approval by the master.'}
+            </span>
+          </span>
+        </label>
         <div className="flex gap-3">
           <Button type="button" variant="secondary" size="lg" onClick={() => navigate(-1)} className="flex-1">Cancel</Button>
           <Button type="submit" size="lg" loading={saveMutation.isPending} className="flex-1">

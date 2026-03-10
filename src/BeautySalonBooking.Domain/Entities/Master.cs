@@ -8,6 +8,7 @@ public class Master
     public string Phone { get; set; } = string.Empty;
     public string? Photo { get; set; }
     public string? Description { get; set; }
+    public bool AutoApproveBookings { get; set; } = true;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

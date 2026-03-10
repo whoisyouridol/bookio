@@ -60,8 +60,8 @@ public class BookingService
         var salonExists = await _db.Salons.AnyAsync(s => s.Id == req.SalonId && s.IsActive);
         if (!salonExists) return (null, "Salon not found");
 
-        var masterExists = await _db.Masters.AnyAsync(m => m.Id == req.MasterId && m.IsActive);
-        if (!masterExists) return (null, "Master not found");
+        var master = await _db.Masters.FirstOrDefaultAsync(m => m.Id == req.MasterId && m.IsActive);
+        if (master == null) return (null, "Master not found");
 
         var sm = await _db.SalonMasters.FirstOrDefaultAsync(x => x.SalonId == req.SalonId && x.MasterId == req.MasterId && x.IsActive);
         if (sm == null) return (null, "Master does not work at this salon");
@@ -78,15 +78,15 @@ public class BookingService
         decimal totalPrice = masterServices.Sum(ms => ms.Price);
         var endTime = startTime.AddMinutes(totalDuration);
 
-        // Collect contiguous available slots starting at startTime that together cover totalDuration.
-        // Using StartTime >= startTime (not EndTime <= endTime) so that a single 60-min slot
-        // correctly covers a 30- or 45-min service.
         var candidateSlots = await _db.TimeSlots
             .Where(ts => ts.SalonMasterId == sm.Id && ts.Date == date &&
                          ts.StartTime >= startTime &&
                          ts.Status == TimeSlotStatus.Available)
             .OrderBy(ts => ts.StartTime)
             .ToListAsync();
+
+        if (candidateSlots.Count == 0 || candidateSlots[0].StartTime != startTime)
+            return (null, "Not enough available time slots for the requested duration");
 
         var requiredSlots = new List<Domain.Entities.TimeSlot>();
         var coveredMinutes = 0;
@@ -103,7 +103,6 @@ public class BookingService
         if (coveredMinutes < totalDuration)
             return (null, "Not enough available time slots for the requested duration");
 
-        // Mark slots as booked
         foreach (var slot in requiredSlots)
             slot.Status = TimeSlotStatus.Booked;
 
@@ -135,9 +134,19 @@ public class BookingService
         }).ToList();
 
         _db.Bookings.Add(booking);
+
+        if (master.AutoApproveBookings)
+        {
+            booking.Status = BookingStatus.Confirmed;
+            booking.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _db.SaveChangesAsync();
 
-        await _notifications.SendBookingConfirmationAsync(booking.Id);
+        if (master.AutoApproveBookings)
+            await _notifications.SendBookingConfirmedAsync(booking.Id);
+        else
+            await _notifications.SendBookingPendingApprovalAsync(booking.Id);
 
         var created = await _db.Bookings
             .Include(b => b.Salon).Include(b => b.Master)
@@ -156,6 +165,9 @@ public class BookingService
         booking.Status = BookingStatus.Confirmed;
         booking.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        await _notifications.SendBookingConfirmedAsync(booking.Id);
+
         return (MapToDto(booking), null);
     }
 
@@ -172,6 +184,9 @@ public class BookingService
         booking.CompletedAt = DateTime.UtcNow;
         booking.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        await _notifications.SendBookingCompletedAsync(booking.Id);
+
         return (MapToDto(booking), null);
     }
 
@@ -203,7 +218,7 @@ public class BookingService
         }
 
         await _db.SaveChangesAsync();
-        await _notifications.SendCancellationNotificationAsync(booking.Id, side);
+        await _notifications.SendBookingCancelledAsync(booking.Id, side);
 
         return (MapToDto(booking), null);
     }
