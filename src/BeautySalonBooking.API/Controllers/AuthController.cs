@@ -60,6 +60,24 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Register a new master account via Google. Returns a pending-activation message — no tokens issued.</summary>
+    [HttpPost("master/google")]
+    public async Task<IActionResult> MasterGoogle([FromBody] MasterGoogleAuthRequest req)
+    {
+        var (message, error) = await _auth.RegisterMasterWithGoogleAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
+    /// <summary>Register a new master account via Facebook. Returns a pending-activation message — no tokens issued.</summary>
+    [HttpPost("master/facebook")]
+    public async Task<IActionResult> MasterFacebook([FromBody] MasterFacebookAuthRequest req)
+    {
+        var (message, error) = await _auth.RegisterMasterWithFacebookAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
     /// <summary>Exchange the HttpOnly refresh-token cookie for a new access token (token rotation)</summary>
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh()

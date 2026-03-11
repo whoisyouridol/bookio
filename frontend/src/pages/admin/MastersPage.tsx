@@ -87,7 +87,7 @@ export default function MastersPage() {
                   <span className="text-gray-400">({m.ratingCount})</span>
                 </div>
               </div>
-              <Badge variant={m.isActive ? 'success' : 'error'}>{m.isActive ? 'Active' : 'Inactive'}</Badge>
+              <Badge variant={m.isDeleted ? 'error' : 'success'}>{m.isDeleted ? 'Deleted' : 'Active'}</Badge>
               <div className="flex gap-1">
                 <Link to={`/admin/masters/${m.id}`}>
                   <Button variant="ghost" size="sm"><Edit2 className="w-4 h-4" /></Button>

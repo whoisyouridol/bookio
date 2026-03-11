@@ -16,7 +16,7 @@ public class SalonMasterService
         var salonExists = await _db.Salons.AnyAsync(s => s.Id == salonId && s.IsActive);
         if (!salonExists) return (null, "Salon not found");
 
-        var masterExists = await _db.Masters.AnyAsync(m => m.Id == req.MasterId && m.IsActive);
+        var masterExists = await _db.Masters.AnyAsync(m => m.Id == req.MasterId && !m.IsDeleted);
         if (!masterExists) return (null, "Master not found");
 
         var existing = await _db.SalonMasters.FirstOrDefaultAsync(sm => sm.SalonId == salonId && sm.MasterId == req.MasterId);

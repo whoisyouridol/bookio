@@ -72,7 +72,7 @@ public class BookingService
         var salonExists = await _db.Salons.AnyAsync(s => s.Id == req.SalonId && s.IsActive);
         if (!salonExists) return (null, "Salon not found");
 
-        var master = await _db.Masters.FirstOrDefaultAsync(m => m.Id == req.MasterId && m.IsActive);
+        var master = await _db.Masters.FirstOrDefaultAsync(m => m.Id == req.MasterId && !m.IsDeleted);
         if (master == null) return (null, "Master not found");
 
         var sm = await _db.SalonMasters.FirstOrDefaultAsync(x => x.SalonId == req.SalonId && x.MasterId == req.MasterId && x.IsActive);

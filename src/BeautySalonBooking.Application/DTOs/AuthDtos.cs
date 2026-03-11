@@ -15,6 +15,14 @@ public record GoogleAuthRequest(string Credential);
 
 public record FacebookAuthRequest(string AccessToken);
 
+// ── Master social registration ─────────────────────────────────────────────
+
+/// <summary>Register a new master via Google. Account is inactive until SuperAdmin activates it.</summary>
+public record MasterGoogleAuthRequest(string Credential, Guid SalonId);
+
+/// <summary>Register a new master via Facebook. Account is inactive until SuperAdmin activates it.</summary>
+public record MasterFacebookAuthRequest(string AccessToken, Guid SalonId);
+
 public record RefreshRequest(); // body empty — token comes from HttpOnly cookie
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
@@ -66,4 +74,5 @@ public record AdminUserDto(
     Guid? SalonId,
     Guid? MasterId,
     string? ExternalProvider,
+    bool IsActive,
     DateTime CreatedAt);

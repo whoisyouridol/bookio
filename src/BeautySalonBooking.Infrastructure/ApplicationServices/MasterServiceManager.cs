@@ -12,7 +12,7 @@ public class MasterServiceManager
 
     public async Task<(MasterServiceDto? result, string? error)> AddAsync(Guid masterId, AddMasterServiceRequest req)
     {
-        var masterExists = await _db.Masters.AnyAsync(m => m.Id == masterId && m.IsActive);
+        var masterExists = await _db.Masters.AnyAsync(m => m.Id == masterId && !m.IsDeleted);
         if (!masterExists) return (null, "Master not found");
 
         var serviceExists = await _db.Services.AnyAsync(s => s.Id == req.ServiceId);

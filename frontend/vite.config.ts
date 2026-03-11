@@ -14,7 +14,7 @@ export default defineConfig({
     port: 5175,
     proxy: {
       // All /api/* calls are proxied to the backend so HttpOnly cookies work same-origin
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api': { target: 'http://localhost:5032', changeOrigin: true },
     },
   },
 })

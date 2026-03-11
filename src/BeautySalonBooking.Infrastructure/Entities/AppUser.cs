@@ -20,6 +20,9 @@ public class AppUser : IdentityUser<Guid>
 
     public string? ExternalProviderId { get; set; }
 
+    /// <summary>False for newly registered masters pending SuperAdmin activation.</summary>
+    public bool IsActive { get; set; } = true;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];

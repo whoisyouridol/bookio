@@ -9,7 +9,7 @@ public class Master
     public string? Photo { get; set; }
     public string? Description { get; set; }
     public bool AutoApproveBookings { get; set; } = true;
-    public bool IsActive { get; set; } = true;
+    public bool IsDeleted { get; set; } = false;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

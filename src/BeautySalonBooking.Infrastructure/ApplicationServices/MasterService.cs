@@ -14,7 +14,7 @@ public class MasterService
     public async Task<List<MasterDto>> GetAllAsync()
     {
         var masters = await _db.Masters
-            .Where(m => m.IsActive)
+            .Where(m => !m.IsDeleted)
             .Include(m => m.Ratings)
             .OrderBy(m => m.LastName)
             .ToListAsync();
@@ -71,7 +71,7 @@ public class MasterService
     {
         var master = await _db.Masters.FindAsync(id);
         if (master == null) return false;
-        master.IsActive = false;
+        master.IsDeleted = true;
         master.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return true;
@@ -109,6 +109,6 @@ public class MasterService
     private static MasterDto MapToDto(Master m)
     {
         var avg = m.Ratings.Any() ? (double?)m.Ratings.Average(r => r.Rating) : null;
-        return new MasterDto(m.Id, m.FirstName, m.LastName, m.Phone, m.Photo, m.Description, m.AutoApproveBookings, m.IsActive, m.CreatedAt, avg, m.Ratings.Count);
+        return new MasterDto(m.Id, m.FirstName, m.LastName, m.Phone, m.Photo, m.Description, m.AutoApproveBookings, m.IsDeleted, m.CreatedAt, avg, m.Ratings.Count);
     }
 }

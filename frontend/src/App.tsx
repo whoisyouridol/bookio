@@ -4,6 +4,7 @@ import { RoleGuard } from '@/router/RoleGuard';
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
+import MasterRegisterPage from '@/pages/auth/MasterRegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
   // ── Auth routes ────────────────────────────────────────────────────────────
   { path: '/login', Component: LoginPage },
   { path: '/register', Component: RegisterPage },
+  { path: '/register/master', Component: MasterRegisterPage },
   { path: '/auth/forgot-password', Component: ForgotPasswordPage },
   { path: '/auth/reset-password', Component: ResetPasswordPage },
 

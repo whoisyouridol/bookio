@@ -8,7 +8,7 @@ public record MasterDto(
     string? Photo,
     string? Description,
     bool AutoApproveBookings,
-    bool IsActive,
+    bool IsDeleted,
     DateTime CreatedAt,
     double? AverageRating,
     int RatingCount

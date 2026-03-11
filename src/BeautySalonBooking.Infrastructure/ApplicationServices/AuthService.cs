@@ -82,6 +82,9 @@ public class AuthService
         if (user == null || !await _userManager.CheckPasswordAsync(user, req.Password))
             return (null, null, "Invalid email or password");
 
+        if (!user.IsActive)
+            return (null, null, "Your account is pending activation by an administrator");
+
         var (response, rawRefresh) = await IssueTokensAsync(user);
         return (response, rawRefresh, null);
     }
@@ -95,6 +98,9 @@ public class AuthService
             return (null, null, "Invalid Google credential");
 
         var user = await FindOrCreateExternalUserAsync(email, name, "Google", googleId);
+        if (!user.IsActive)
+            return (null, null, "Your account is pending activation by an administrator");
+
         var (response, rawRefresh) = await IssueTokensAsync(user);
         return (response, rawRefresh, null);
     }
@@ -110,8 +116,81 @@ public class AuthService
             return (null, null, "Facebook account does not have a verified email address");
 
         var user = await FindOrCreateExternalUserAsync(email, name, "Facebook", fbId);
+        if (!user.IsActive)
+            return (null, null, "Your account is pending activation by an administrator");
+
         var (response, rawRefresh) = await IssueTokensAsync(user);
         return (response, rawRefresh, null);
+    }
+
+    // ── Master social registration ────────────────────────────────────────────
+
+    public async Task<(string? message, string? error)> RegisterMasterWithGoogleAsync(MasterGoogleAuthRequest req)
+    {
+        var (email, name, googleId) = await ValidateGoogleTokenAsync(req.Credential);
+        if (email == null || googleId == null)
+            return (null, "Invalid Google credential");
+
+        return await RegisterMasterExternalAsync(email, name, "Google", googleId, req.SalonId);
+    }
+
+    public async Task<(string? message, string? error)> RegisterMasterWithFacebookAsync(MasterFacebookAuthRequest req)
+    {
+        var (email, name, fbId) = await ValidateFacebookTokenAsync(req.AccessToken);
+        if (fbId == null)
+            return (null, "Invalid Facebook access token");
+        if (email == null)
+            return (null, "Facebook account does not have a verified email address");
+
+        return await RegisterMasterExternalAsync(email, name, "Facebook", fbId, req.SalonId);
+    }
+
+    private async Task<(string? message, string? error)> RegisterMasterExternalAsync(
+        string email, string? name, string provider, string providerId, Guid salonId)
+    {
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == salonId && s.IsActive);
+        if (salon == null)
+            return (null, "Salon not found");
+
+        var existing = await _db.Set<AppUser>()
+            .FirstOrDefaultAsync(u => u.ExternalProvider == provider && u.ExternalProviderId == providerId)
+            ?? await _userManager.FindByEmailAsync(email);
+
+        if (existing != null)
+            return (null, "An account with this email is already registered");
+
+        var parts = name?.Split(' ', 2) ?? [];
+        var master = new Domain.Entities.Master
+        {
+            Id = Guid.NewGuid(),
+            FirstName = parts.Length > 0 ? parts[0] : email.Split('@')[0],
+            LastName = parts.Length > 1 ? parts[1] : "",
+            Phone = "",
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _db.Masters.Add(master);
+
+        var user = new AppUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            FirstName = master.FirstName,
+            LastName = master.LastName,
+            ExternalProvider = provider,
+            ExternalProviderId = providerId,
+            Role = AppRole.MasterAdmin,
+            MasterId = master.Id,
+            SalonId = salonId,
+            IsActive = false,
+        };
+        await _userManager.CreateAsync(user);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Master registration pending: {Email}, Salon: {SalonId}", email, salonId);
+        return ("Registration submitted. Your account is pending activation by an administrator.", null);
     }
 
     // ── Refresh ───────────────────────────────────────────────────────────────
@@ -359,7 +438,7 @@ public class AuthService
 
     private static AdminUserDto MapAdminDto(AppUser u) => new(
         u.Id, u.Email!, u.FirstName, u.LastName, u.PhoneNumber,
-        u.Role.ToString(), u.SalonId, u.MasterId, u.ExternalProvider, u.CreatedAt);
+        u.Role.ToString(), u.SalonId, u.MasterId, u.ExternalProvider, u.IsActive, u.CreatedAt);
 
     // ── Private JSON response models ──────────────────────────────────────────
 

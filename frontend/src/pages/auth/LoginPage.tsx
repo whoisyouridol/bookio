@@ -154,6 +154,12 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+        <p className="mt-2 text-center text-sm text-gray-500">
+          Are you a master/specialist?{' '}
+          <Link to="/register/master" className="text-purple-600 font-medium hover:underline">
+            Join as a Master
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ export interface MasterDto {
   photo?: string;
   description?: string;
   autoApproveBookings: boolean;
-  isActive: boolean;
+  isDeleted: boolean;
   createdAt: string;
   averageRating?: number;
   ratingCount: number;
@@ -245,6 +245,20 @@ export interface UserDto {
   role: string;
   salonId?: string;
   masterId?: string;
+}
+
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  role: string;
+  salonId?: string;
+  masterId?: string;
+  externalProvider?: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface AuthResponse {
