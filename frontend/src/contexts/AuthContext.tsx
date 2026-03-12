@@ -16,6 +16,7 @@ export function mapRole(backendRole: string): Role {
   switch (backendRole) {
     case 'SuperAdmin':   return 'superadmin';
     case 'SalonAdmin':   return 'salon_admin';
+    case 'Master':
     case 'MasterAdmin':  return 'master_admin';
     default:             return 'client';
   }
