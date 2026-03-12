@@ -13,7 +13,7 @@ import type { ServiceDto } from '@/types';
 
 export default function ServicesPage() {
   const queryClient = useQueryClient();
-  const { data: services, isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices });
+  const { data: services, isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices, refetchOnMount: 'always' });
 
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<ServiceDto | null>(null);

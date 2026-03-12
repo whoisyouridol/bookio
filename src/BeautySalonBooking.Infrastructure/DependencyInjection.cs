@@ -20,7 +20,11 @@ public static class DependencyInjection
     {
         // ── Database ───────────────────────────────────────────────────────────
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
+                npgsql => npgsql.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorCodesToAdd: null)));
 
         // ── ASP.NET Core Identity ──────────────────────────────────────────────
         services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
@@ -45,6 +49,7 @@ public static class DependencyInjection
         })
         .AddJwtBearer(options =>
         {
+            options.MapInboundClaims = false;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,

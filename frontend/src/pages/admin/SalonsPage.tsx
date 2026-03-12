@@ -12,7 +12,7 @@ import type { SalonDto } from '@/types';
 
 export default function SalonsPage() {
   const queryClient = useQueryClient();
-  const { data: salons, isLoading } = useQuery({ queryKey: ['salons'], queryFn: getSalons });
+  const { data: salons, isLoading } = useQuery({ queryKey: ['salons'], queryFn: getSalons, refetchOnMount: 'always' });
 
   const deleteMutation = useMutation({
     mutationFn: deleteSalon,

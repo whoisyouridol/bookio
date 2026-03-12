@@ -5,7 +5,10 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'sonner';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { initFacebookSDK } from './lib/facebook';
 import './styles/index.css';
+
+initFacebookSDK();
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };

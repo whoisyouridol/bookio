@@ -1,6 +1,34 @@
-**/.git
-**/.vs
-**/bin
-**/obj
+# Git
+.git
+.gitignore
+
+# Build outputs
+**/bin/
+**/obj/
+frontend/dist/
+**/node_modules/
+
+# Secrets — never include in build context
+.env
+.env.local
+.env.production
+appsettings.json
+appsettings.*.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
 **/*.user
-**/node_modules
+
+# Tests (not needed in production image)
+tests/
+
+# Docs & config
+*.md
+.dockerignore
+docker-compose*.yml
+
+# Local dev only
+ui_sample/
+.claude/

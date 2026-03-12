@@ -19,6 +19,7 @@ export default function MastersPage() {
   const { data: masters, isLoading: loadingMasters } = useQuery({
     queryKey: ['masters'],
     queryFn: getMasters,
+    refetchOnMount: 'always',
   });
 
   // For salon_admin: fetch the master IDs linked to their salon for client-side filtering
@@ -87,7 +88,9 @@ export default function MastersPage() {
                   <span className="text-gray-400">({m.ratingCount})</span>
                 </div>
               </div>
-              <Badge variant={m.isDeleted ? 'error' : 'success'}>{m.isDeleted ? 'Deleted' : 'Active'}</Badge>
+              <Badge variant={m.isDeleted ? 'error' : m.isUserActive ? 'success' : 'warning'}>
+                {m.isDeleted ? 'Deleted' : m.isUserActive ? 'Active' : 'Pending'}
+              </Badge>
               <div className="flex gap-1">
                 <Link to={`/admin/masters/${m.id}`}>
                   <Button variant="ghost" size="sm"><Edit2 className="w-4 h-4" /></Button>

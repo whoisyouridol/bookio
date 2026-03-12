@@ -123,7 +123,50 @@ public class AuthService
         return (response, rawRefresh, null);
     }
 
-    // ── Master social registration ────────────────────────────────────────────
+    // ── Master registration ───────────────────────────────────────────────────
+
+    public async Task<(string? message, string? error)> RegisterMasterAsync(MasterRegisterRequest req)
+    {
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == req.SalonId && s.IsActive);
+        if (salon == null) return (null, "Salon not found");
+
+        if (await _userManager.FindByEmailAsync(req.Email) != null)
+            return (null, "An account with this email is already registered");
+
+        var master = new Domain.Entities.Master
+        {
+            Id = Guid.NewGuid(),
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            Phone = req.Phone ?? "",
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _db.Masters.Add(master);
+
+        var user = new AppUser
+        {
+            UserName = req.Email,
+            Email = req.Email,
+            EmailConfirmed = true,
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            PhoneNumber = req.Phone,
+            Role = AppRole.Master,
+            MasterId = master.Id,
+            SalonId = req.SalonId,
+            IsActive = false,
+        };
+
+        var result = await _userManager.CreateAsync(user, req.Password);
+        if (!result.Succeeded)
+            return (null, string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Master registration pending: {Email}, Salon: {SalonId}", req.Email, req.SalonId);
+        return ("Registration submitted. Your account is pending activation by an administrator.", null);
+    }
 
     public async Task<(string? message, string? error)> RegisterMasterWithGoogleAsync(MasterGoogleAuthRequest req)
     {
@@ -181,7 +224,7 @@ public class AuthService
             LastName = master.LastName,
             ExternalProvider = provider,
             ExternalProviderId = providerId,
-            Role = AppRole.MasterAdmin,
+            Role = AppRole.Master,
             MasterId = master.Id,
             SalonId = salonId,
             IsActive = false,
@@ -276,9 +319,12 @@ public class AuthService
 
     // ── Admin: list / create / update role / delete ───────────────────────────
 
-    public async Task<List<AdminUserDto>> GetAllUsersAsync()
+    public async Task<List<AdminUserDto>> GetAllUsersAsync(string? role = null)
     {
-        var users = await _userManager.Users.OrderBy(u => u.Email).ToListAsync();
+        var query = _userManager.Users.AsQueryable();
+        if (!string.IsNullOrEmpty(role) && Enum.TryParse<AppRole>(role, out var parsed))
+            query = query.Where(u => u.Role == parsed);
+        var users = await query.OrderBy(u => u.Email).ToListAsync();
         return users.Select(MapAdminDto).ToList();
     }
 
@@ -319,6 +365,46 @@ public class AuthService
         user.Role = role;
         user.SalonId = req.SalonId;
         user.MasterId = req.MasterId;
+        await _userManager.UpdateAsync(user);
+        return (MapAdminDto(user), null);
+    }
+
+    public async Task<AdminUserDto?> GetUserAsync(Guid userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        return user == null ? null : MapAdminDto(user);
+    }
+
+    public async Task<(AdminUserDto? result, string? error)> UpdateUserProfileAsync(Guid userId, UpdateUserProfileRequest req)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null) return (null, "User not found");
+
+        if (!string.IsNullOrWhiteSpace(req.Email) && req.Email != user.Email)
+        {
+            if (await _userManager.FindByEmailAsync(req.Email) != null)
+                return (null, "Email is already in use");
+            user.Email = req.Email;
+            user.UserName = req.Email;
+        }
+
+        if (req.FirstName != null) user.FirstName = req.FirstName;
+        if (req.LastName != null) user.LastName = req.LastName;
+        if (req.Phone != null) user.PhoneNumber = req.Phone;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return (null, string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        return (MapAdminDto(user), null);
+    }
+
+    public async Task<(AdminUserDto? result, string? error)> SetUserActiveAsync(Guid userId, bool isActive)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null) return (null, "User not found");
+
+        user.IsActive = isActive;
         await _userManager.UpdateAsync(user);
         return (MapAdminDto(user), null);
     }

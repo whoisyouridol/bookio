@@ -193,7 +193,17 @@ public static class DataSeeder
         foreach (var entry in admins)
         {
             var existing = await userManager.FindByEmailAsync(entry.Email);
-            if (existing != null) continue;
+            if (existing != null)
+            {
+                // Ensure existing SuperAdmins are always active
+                if (!existing.IsActive)
+                {
+                    existing.IsActive = true;
+                    await userManager.UpdateAsync(existing);
+                    logger.LogInformation("SuperAdmin activated: {Email}", entry.Email);
+                }
+                continue;
+            }
 
             var user = new AppUser
             {
@@ -203,6 +213,7 @@ public static class DataSeeder
                 FirstName = entry.FirstName ?? "Super",
                 LastName = entry.LastName ?? "Admin",
                 Role = Domain.Enums.AppRole.SuperAdmin,
+                IsActive = true,
             };
 
             var result = await userManager.CreateAsync(user, entry.Password);

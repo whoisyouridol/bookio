@@ -15,7 +15,16 @@ public record GoogleAuthRequest(string Credential);
 
 public record FacebookAuthRequest(string AccessToken);
 
-// ── Master social registration ─────────────────────────────────────────────
+// ── Master registration ────────────────────────────────────────────────────
+
+/// <summary>Register a new master via email + password. Account is inactive until SuperAdmin activates it.</summary>
+public record MasterRegisterRequest(
+    string Email,
+    string Password,
+    string FirstName,
+    string LastName,
+    string? Phone,
+    Guid SalonId);
 
 /// <summary>Register a new master via Google. Account is inactive until SuperAdmin activates it.</summary>
 public record MasterGoogleAuthRequest(string Credential, Guid SalonId);
@@ -49,6 +58,14 @@ public record UpdateUserRoleRequest(
     string Role,
     Guid? SalonId,
     Guid? MasterId);
+
+public record UpdateUserProfileRequest(
+    string? FirstName,
+    string? LastName,
+    string? Phone,
+    string? Email);
+
+public record SetUserActiveRequest(bool IsActive);
 
 // ── Responses ─────────────────────────────────────────────────────────────
 

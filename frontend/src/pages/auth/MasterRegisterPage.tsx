@@ -3,23 +3,55 @@ import { Link } from 'react-router';
 import { GoogleLogin } from '@react-oauth/google';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import { getSalons } from '@/api/salons';
-import { registerMasterWithGoogle, registerMasterWithFacebook } from '@/api/auth';
+import { registerMaster, registerMasterWithGoogle, registerMasterWithFacebook } from '@/api/auth';
 import type { SalonDto } from '@/types';
 
 type Step = 'select-salon' | 'register' | 'success';
 
+const extractError = (err: unknown) =>
+  (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+  ?? 'Something went wrong. Please try again.';
+
 export default function MasterRegisterPage() {
   const [step, setStep] = useState<Step>('select-salon');
   const [selectedSalon, setSelectedSalon] = useState<SalonDto | null>(null);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Email form fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
 
   const { data: salons = [], isLoading: salonsLoading } = useQuery({
     queryKey: ['salons-public'],
     queryFn: getSalons,
   });
 
+  const filtered = salons.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    s.address?.toLowerCase().includes(search.toLowerCase())
+  );
+
   const handleSuccess = () => setStep('success');
+
+  const handleEmailRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSalon) return;
+    setLoading(true);
+    try {
+      await registerMaster({ email, password, firstName, lastName, phone: phone || undefined, salonId: selectedSalon.id });
+      handleSuccess();
+    } catch (err) {
+      toast.error(extractError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogle = async (credential: string) => {
     if (!selectedSalon) return;
@@ -27,33 +59,27 @@ export default function MasterRegisterPage() {
     try {
       await registerMasterWithGoogle(credential, selectedSalon.id);
       handleSuccess();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        ?? 'Registration failed. Please try again.';
-      toast.error(msg);
+    } catch (err) {
+      toast.error(extractError(err));
     } finally {
       setLoading(false);
     }
   };
 
+  const isHttps = window.location.protocol === 'https:';
+
   const handleFacebook = () => {
     if (!selectedSalon) return;
-    (window as unknown as {
-      FB?: { login: (cb: (res: { authResponse?: { accessToken: string } }) => void, opts: object) => void }
-    }).FB?.login(
-      async res => {
+    const salonId = selectedSalon.id;
+    window.FB?.login(
+      res => {
         if (!res.authResponse?.accessToken) return;
+        const token = res.authResponse.accessToken;
         setLoading(true);
-        try {
-          await registerMasterWithFacebook(res.authResponse.accessToken, selectedSalon.id);
-          handleSuccess();
-        } catch (err: unknown) {
-          const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-            ?? 'Registration failed. Please try again.';
-          toast.error(msg);
-        } finally {
-          setLoading(false);
-        }
+        registerMasterWithFacebook(token, salonId)
+          .then(() => handleSuccess())
+          .catch(err => toast.error(extractError(err)))
+          .finally(() => setLoading(false));
       },
       { scope: 'email,public_profile' }
     );
@@ -92,9 +118,7 @@ export default function MasterRegisterPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Join as a Master</h1>
           <p className="text-sm text-gray-500">
-            {step === 'select-salon'
-              ? 'Choose the salon you work at'
-              : `Registering for ${selectedSalon?.name}`}
+            {step === 'select-salon' ? 'Choose the salon you work at' : `Registering for ${selectedSalon?.name}`}
           </p>
         </div>
 
@@ -111,44 +135,61 @@ export default function MasterRegisterPage() {
               }`}>
                 {i + 1}
               </div>
-              {i < 1 && <div className="flex-1 h-px bg-gray-200 w-8" />}
+              {i < 1 && <div className="h-px bg-gray-200 w-8" />}
             </div>
           ))}
           <span className="text-xs text-gray-400 ml-1">
-            {step === 'select-salon' ? 'Select salon' : 'Sign in'}
+            {step === 'select-salon' ? 'Select salon' : 'Create account'}
           </span>
         </div>
 
         {/* Step 1: Salon selector */}
         {step === 'select-salon' && (
           <div className="space-y-3">
-            {salonsLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map(i => (
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search salons..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Salon list */}
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {salonsLoading ? (
+                [1, 2, 3].map(i => (
                   <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
-                ))}
-              </div>
-            ) : salons.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">No salons available</p>
-            ) : (
-              salons.map(salon => (
-                <button
-                  key={salon.id}
-                  type="button"
-                  onClick={() => setSelectedSalon(salon)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-colors ${
-                    selectedSalon?.id === salon.id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <p className={`text-sm font-semibold ${selectedSalon?.id === salon.id ? 'text-purple-700' : 'text-gray-800'}`}>
-                    {salon.name}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{salon.address}</p>
-                </button>
-              ))
-            )}
+                ))
+              ) : filtered.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  {search ? 'No salons match your search' : 'No salons available'}
+                </p>
+              ) : (
+                filtered.map(salon => (
+                  <button
+                    key={salon.id}
+                    type="button"
+                    onClick={() => setSelectedSalon(salon)}
+                    className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-colors ${
+                      selectedSalon?.id === salon.id
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${selectedSalon?.id === salon.id ? 'text-purple-700' : 'text-gray-800'}`}>
+                      {salon.name}
+                    </p>
+                    {salon.address && (
+                      <p className="text-xs text-gray-400 mt-0.5">{salon.address}</p>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
 
             <button
               type="button"
@@ -161,38 +202,117 @@ export default function MasterRegisterPage() {
           </div>
         )}
 
-        {/* Step 2: Social sign-in */}
+        {/* Step 2: Registration */}
         {step === 'register' && (
-          <div className="space-y-3">
-            <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-4">
+          <div className="space-y-4">
+            <div className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3">
               <p className="text-xs text-purple-700">
                 Signing up for <strong>{selectedSalon?.name}</strong>. Your account will be reviewed before activation.
               </p>
             </div>
 
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={async credentialResponse => {
-                  if (!credentialResponse.credential) return;
-                  await handleGoogle(credentialResponse.credential);
-                }}
-                onError={() => toast.error('Google sign-in failed')}
-                width="368"
-                text="signup_with"
-                shape="rectangular"
-              />
+            {/* Email + password form */}
+            <form onSubmit={handleEmailRegister} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">First name</label>
+                  <input
+                    required
+                    type="text"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Jane"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Last name</label>
+                  <input
+                    required
+                    type="text"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="jane@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  required
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Min. 6 characters"
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Phone <span className="text-gray-400">(optional)</span></label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="+1 234 567 8900"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-purple-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Submitting…' : 'Create account'}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400">or continue with</span>
+              <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            <button
-              onClick={handleFacebook}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              Continue with Facebook
-            </button>
+            {/* Social */}
+            <div className="space-y-2">
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={async credentialResponse => {
+                    if (!credentialResponse.credential) return;
+                    await handleGoogle(credentialResponse.credential);
+                  }}
+                  onError={() => toast.error('Google sign-in failed')}
+                  width="368"
+                  text="signup_with"
+                  shape="rectangular"
+                />
+              </div>
+              {isHttps ? (
+                <button
+                  onClick={handleFacebook}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  Continue with Facebook
+                </button>
+              ) : null}
+            </div>
 
             <button
               type="button"
@@ -206,9 +326,7 @@ export default function MasterRegisterPage() {
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Already have an account?{' '}
-          <Link to="/login" className="text-purple-600 font-medium hover:underline">
-            Sign in
-          </Link>
+          <Link to="/login" className="text-purple-600 font-medium hover:underline">Sign in</Link>
         </p>
       </div>
     </div>

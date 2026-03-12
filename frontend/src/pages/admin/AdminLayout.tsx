@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle, LogOut, ShieldCheck } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth, type Role } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ const allNav: { to: string; label: string; icon: React.ElementType; exact?: bool
   { to: '/admin/masters', label: 'Masters', icon: Users, roles: ['superadmin', 'salon_admin', 'master_admin'] },
   { to: '/admin/services', label: 'Services', icon: Scissors, roles: ['superadmin', 'salon_admin'] },
   { to: '/admin/bookings', label: 'Bookings', icon: Calendar, roles: ['superadmin', 'salon_admin', 'master_admin'] },
+  { to: '/admin/users', label: 'Users', icon: ShieldCheck, roles: ['superadmin'] },
 ];
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -28,11 +29,20 @@ export default function AdminLayout() {
   const nav = allNav
     .filter(item => item.roles.includes(role))
     .map(item => {
-      if (item.to === '/admin/masters' && role === 'master_admin' && masterId) {
-        return { ...item, to: `/admin/masters/${masterId}`, label: 'My Profile', icon: UserCircle as React.ElementType };
+      if (item.to === '/admin/masters' && role === 'master_admin') {
+        return {
+          ...item,
+          to: masterId ? `/admin/masters/${masterId}` : '/admin/masters/new',
+          label: 'My Profile',
+          icon: UserCircle as React.ElementType,
+        };
       }
-      if (item.to === '/admin/salons' && role === 'salon_admin' && salonId) {
-        return { ...item, to: `/admin/salons/${salonId}`, label: 'My Salon' };
+      if (item.to === '/admin/salons' && role === 'salon_admin') {
+        return {
+          ...item,
+          to: salonId ? `/admin/salons/${salonId}` : '/admin/salons/new',
+          label: 'My Salon',
+        };
       }
       return item;
     });

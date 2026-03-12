@@ -37,6 +37,7 @@ export default function BookingsAdminPage() {
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ['bookings', filterSalon, filterMaster, filterStatus, filterDateFrom, filterDateTo],
+    refetchOnMount: 'always',
     queryFn: () => getBookings({
       salonId: filterSalon || undefined,
       masterId: filterMaster || undefined,

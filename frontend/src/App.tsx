@@ -28,6 +28,8 @@ import MasterFormPage from '@/pages/admin/MasterFormPage';
 import ServicesPage from '@/pages/admin/ServicesPage';
 import BookingsAdminPage from '@/pages/admin/BookingsAdminPage';
 import BookingDetailAdminPage from '@/pages/admin/BookingDetailAdminPage';
+import UsersPage from '@/pages/admin/UsersPage';
+import UserDetailPage from '@/pages/admin/UserDetailPage';
 
 const router = createBrowserRouter([
   // ── Auth routes ────────────────────────────────────────────────────────────
@@ -113,6 +115,22 @@ const router = createBrowserRouter([
       { path: 'services', element: <ServicesPage /> },
       { path: 'bookings', element: <BookingsAdminPage /> },
       { path: 'bookings/:bookingId', element: <BookingDetailAdminPage /> },
+      {
+        path: 'users',
+        element: (
+          <RoleGuard allow={['superadmin']} redirect="/admin">
+            <UsersPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'users/:userId',
+        element: (
+          <RoleGuard allow={['superadmin']} redirect="/admin">
+            <UserDetailPage />
+          </RoleGuard>
+        ),
+      },
     ],
   },
 ]);

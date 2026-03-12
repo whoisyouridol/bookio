@@ -60,6 +60,15 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Register a new master account with email and password. Returns a pending-activation message — no tokens issued.</summary>
+    [HttpPost("master/register")]
+    public async Task<IActionResult> MasterRegister([FromBody] MasterRegisterRequest req)
+    {
+        var (message, error) = await _auth.RegisterMasterAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
     /// <summary>Register a new master account via Google. Returns a pending-activation message — no tokens issued.</summary>
     [HttpPost("master/google")]
     public async Task<IActionResult> MasterGoogle([FromBody] MasterGoogleAuthRequest req)

@@ -9,6 +9,8 @@ public record MasterDto(
     string? Description,
     bool AutoApproveBookings,
     bool IsDeleted,
+    /// <summary>Whether the linked user account is active (false = pending SuperAdmin activation)</summary>
+    bool IsUserActive,
     DateTime CreatedAt,
     double? AverageRating,
     int RatingCount

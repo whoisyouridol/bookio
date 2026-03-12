@@ -42,20 +42,22 @@ export default function LoginPage() {
     }
   };
 
+  const isHttps = window.location.protocol === 'https:';
+
   const handleFacebook = () => {
-    if (typeof window === 'undefined') return;
-    (window as unknown as { FB?: { login: (cb: (res: { authResponse?: { accessToken: string } }) => void, opts: object) => void } }).FB?.login(
-      async res => {
+    window.FB?.login(
+      res => {
         if (!res.authResponse?.accessToken) return;
+        const token = res.authResponse.accessToken;
         setLoading(true);
-        try {
-          const user = await loginWithFacebook(res.authResponse.accessToken);
-          setRedirectTo(getRedirect(user.role));
-        } catch {
-          toast.error('Facebook sign-in failed');
-        } finally {
-          setLoading(false);
-        }
+        loginWithFacebook(token)
+          .then(user => setRedirectTo(getRedirect(user.role)))
+          .catch((err: unknown) => {
+            const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+              ?? 'Facebook sign-in failed';
+            toast.error(msg);
+          })
+          .finally(() => setLoading(false));
       },
       { scope: 'email,public_profile' }
     );
@@ -123,8 +125,10 @@ export default function LoginPage() {
                 try {
                   const user = await loginWithGoogle(credentialResponse.credential);
                   setRedirectTo(getRedirect(user.role));
-                } catch {
-                  toast.error('Google sign-in failed');
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+                    ?? 'Google sign-in failed';
+                  toast.error(msg);
                 } finally {
                   setLoading(false);
                 }
@@ -136,16 +140,18 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
-            onClick={handleFacebook}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            Continue with Facebook
-          </button>
+          {isHttps ? (
+            <button
+              onClick={handleFacebook}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              Continue with Facebook
+            </button>
+          ) : null}
         </div>
 
         <p className="mt-6 text-center text-sm text-gray-500">

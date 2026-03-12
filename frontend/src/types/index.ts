@@ -44,6 +44,7 @@ export interface MasterDto {
   description?: string;
   autoApproveBookings: boolean;
   isDeleted: boolean;
+  isUserActive: boolean;
   createdAt: string;
   averageRating?: number;
   ratingCount: number;

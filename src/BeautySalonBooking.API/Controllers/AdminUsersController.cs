@@ -15,9 +15,18 @@ public class AdminUsersController : ControllerBase
 
     public AdminUsersController(AuthService auth) => _auth = auth;
 
-    /// <summary>List all users</summary>
+    /// <summary>List all users, optionally filtered by role (SuperAdmin, SalonAdmin, MasterAdmin, Client)</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _auth.GetAllUsersAsync());
+    public async Task<IActionResult> GetAll([FromQuery] string? role = null)
+        => Ok(await _auth.GetAllUsersAsync(role));
+
+    /// <summary>Get a single user by ID</summary>
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetOne(Guid id)
+    {
+        var user = await _auth.GetUserAsync(id);
+        return user == null ? NotFound() : Ok(user);
+    }
 
     /// <summary>Create a SalonAdmin, MasterAdmin or Client account</summary>
     [HttpPost]
@@ -28,11 +37,29 @@ public class AdminUsersController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Update a user's profile fields (name, phone, email)</summary>
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateProfile(Guid id, [FromBody] UpdateUserProfileRequest req)
+    {
+        var (result, error) = await _auth.UpdateUserProfileAsync(id, req);
+        if (error != null) return BadRequest(new { error });
+        return result == null ? NotFound() : Ok(result);
+    }
+
     /// <summary>Update a user's role and entity link</summary>
     [HttpPut("{id:guid}/role")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateUserRoleRequest req)
     {
         var (result, error) = await _auth.UpdateUserRoleAsync(id, req);
+        if (error != null) return BadRequest(new { error });
+        return result == null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>Activate or deactivate a user account</summary>
+    [HttpPut("{id:guid}/active")]
+    public async Task<IActionResult> SetActive(Guid id, [FromBody] SetUserActiveRequest req)
+    {
+        var (result, error) = await _auth.SetUserActiveAsync(id, req.IsActive);
         if (error != null) return BadRequest(new { error });
         return result == null ? NotFound() : Ok(result);
     }

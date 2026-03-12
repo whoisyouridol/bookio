@@ -1,14 +1,24 @@
-import { Home, Calendar, Settings } from 'lucide-react';
-import { Link, useLocation } from 'react-router';
-
-const items = [
-  { path: '/', icon: Home, label: 'Home' },
-  { path: '/bookings', icon: Calendar, label: 'My Bookings' },
-  { path: '/admin', icon: Settings, label: 'Admin' },
-];
+import { Home, Calendar, Settings, LogIn, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function BottomNav() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { role, isAuthenticated, logout } = useAuth();
+
+  const isAdmin = role !== 'client';
+
+  const items = [
+    { path: '/', icon: Home, label: 'Home' },
+    { path: '/bookings', icon: Calendar, label: 'My Bookings' },
+    ...(isAdmin ? [{ path: '/admin', icon: Settings, label: 'Admin' }] : []),
+  ];
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] z-10">
@@ -28,6 +38,26 @@ export function BottomNav() {
             </Link>
           );
         })}
+
+        {isAuthenticated ? (
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center justify-center flex-1 h-full transition-colors text-[var(--color-text-secondary)] hover:text-red-500"
+          >
+            <LogOut className="w-6 h-6 stroke-2" />
+            <span className="text-xs mt-1 font-medium">Logout</span>
+          </button>
+        ) : (
+          <Link
+            to="/login"
+            className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
+              pathname === '/login' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]'
+            }`}
+          >
+            <LogIn className="w-6 h-6 stroke-2" />
+            <span className="text-xs mt-1 font-medium">Login</span>
+          </Link>
+        )}
       </div>
     </nav>
   );

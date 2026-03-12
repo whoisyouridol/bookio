@@ -9,9 +9,9 @@ import { Badge, bookingStatusBadge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
 
 export default function DashboardPage() {
-  const { data: salons } = useQuery({ queryKey: ['salons'], queryFn: getSalons });
-  const { data: masters } = useQuery({ queryKey: ['masters'], queryFn: getMasters });
-  const { data: bookings, isLoading } = useQuery({ queryKey: ['bookings'], queryFn: () => getBookings() });
+  const { data: salons } = useQuery({ queryKey: ['salons'], queryFn: getSalons, refetchOnMount: 'always' });
+  const { data: masters } = useQuery({ queryKey: ['masters'], queryFn: getMasters, refetchOnMount: 'always' });
+  const { data: bookings, isLoading } = useQuery({ queryKey: ['bookings'], queryFn: () => getBookings(), refetchOnMount: 'always' });
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayBookings = bookings?.filter(b => b.bookingDate === today) ?? [];

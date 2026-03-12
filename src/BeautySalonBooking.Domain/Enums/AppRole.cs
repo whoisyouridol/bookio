@@ -4,6 +4,6 @@ public enum AppRole
 {
     SuperAdmin,
     SalonAdmin,
-    MasterAdmin,
+    Master,
     Client,
 }

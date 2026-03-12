@@ -47,6 +47,13 @@ export async function resetPassword(email: string, token: string, newPassword: s
   await apiClient.post('/auth/reset-password', { email, token, newPassword });
 }
 
+export async function registerMaster(data: {
+  email: string; password: string; firstName: string; lastName: string; phone?: string; salonId: string;
+}): Promise<{ message: string }> {
+  const { data: res } = await apiClient.post<{ message: string }>('/auth/master/register', data);
+  return res;
+}
+
 export async function registerMasterWithGoogle(credential: string, salonId: string): Promise<{ message: string }> {
   const { data } = await apiClient.post<{ message: string }>('/auth/master/google', { credential, salonId });
   return data;
@@ -57,7 +64,37 @@ export async function registerMasterWithFacebook(accessToken: string, salonId: s
   return data;
 }
 
-export async function getAdminUsers(): Promise<AdminUserDto[]> {
-  const { data } = await apiClient.get<AdminUserDto[]>('/admin/users');
+export async function getAdminUsers(role?: string): Promise<AdminUserDto[]> {
+  const { data } = await apiClient.get<AdminUserDto[]>('/admin/users', {
+    params: role ? { role } : undefined,
+  });
   return data;
+}
+
+export async function getAdminUser(id: string): Promise<AdminUserDto> {
+  const { data } = await apiClient.get<AdminUserDto>(`/admin/users/${id}`);
+  return data;
+}
+
+export async function updateUserProfile(id: string, data: {
+  firstName?: string; lastName?: string; phone?: string; email?: string;
+}): Promise<AdminUserDto> {
+  const { data: res } = await apiClient.put<AdminUserDto>(`/admin/users/${id}`, data);
+  return res;
+}
+
+export async function setUserActive(id: string, isActive: boolean): Promise<AdminUserDto> {
+  const { data } = await apiClient.put<AdminUserDto>(`/admin/users/${id}/active`, { isActive });
+  return data;
+}
+
+export async function updateUserRole(id: string, data: {
+  role: string; salonId?: string; masterId?: string;
+}): Promise<AdminUserDto> {
+  const { data: res } = await apiClient.put<AdminUserDto>(`/admin/users/${id}/role`, data);
+  return res;
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  await apiClient.delete(`/admin/users/${id}`);
 }
