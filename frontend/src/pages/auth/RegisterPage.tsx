@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getErrorMessage } from '@/lib/error';
 
 type AccountRole = 'Client' | 'SalonAdmin' | 'MasterAdmin';
 
@@ -67,8 +68,7 @@ export default function RegisterPage() {
       toast.success('Account created!');
       setRedirectTo(user.role === 'Client' ? '/' : '/admin');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Registration failed';
-      toast.error(msg);
+      toast.error(getErrorMessage(err, 'Registration failed'));
     } finally {
       setLoading(false);
     }

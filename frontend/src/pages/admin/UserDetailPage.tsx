@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/error';
 
 type Tab = 'account' | 'master';
 
@@ -20,10 +21,6 @@ const ROLE_LABELS: Record<string, string> = {
   Master: 'Master',
   Client: 'Client',
 };
-
-const extractError = (err: unknown) =>
-  (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-  ?? 'Something went wrong';
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -78,7 +75,7 @@ export default function UserDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('Profile updated');
     },
-    onError: err => toast.error(extractError(err)),
+    onError: err => toast.error(getErrorMessage(err)),
   });
 
   const updateRoleMutation = useMutation({
@@ -92,7 +89,7 @@ export default function UserDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('Role updated');
     },
-    onError: err => toast.error(extractError(err)),
+    onError: err => toast.error(getErrorMessage(err)),
   });
 
   const activateMutation = useMutation({
@@ -102,7 +99,7 @@ export default function UserDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success(updated.isActive ? 'User activated' : 'User deactivated');
     },
-    onError: err => toast.error(extractError(err)),
+    onError: err => toast.error(getErrorMessage(err)),
   });
 
   if (isLoading) return <Loader />;

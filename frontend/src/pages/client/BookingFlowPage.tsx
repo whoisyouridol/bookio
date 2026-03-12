@@ -10,8 +10,9 @@ import { Header } from '@/components/Header';
 import { TimeSlotGrid } from '@/components/booking/TimeSlotGrid';
 import { BookingSummary } from '@/components/booking/BookingSummary';
 import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/ui/FormField';
 import { Loader } from '@/components/ui/Loader';
-import { useBooking } from '@/context/BookingContext';
+import { useBooking } from '@/contexts/BookingContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { TimeSlotDto } from '@/types';
@@ -155,9 +156,9 @@ export default function BookingFlowPage() {
               className="bg-[var(--color-surface)] border border-[var(--color-border)] p-4 space-y-4"
               style={{ borderRadius: 'var(--border-radius)' }}
             >
-              <Field label="Full Name *" value={clientName} onChange={setClientName} placeholder="Your name" />
-              <Field label="Phone *" value={clientPhone} onChange={setClientPhone} placeholder="+7 000 000 00 00" type="tel" />
-              <Field label="Email (optional)" value={clientEmail} onChange={setClientEmail} placeholder="your@email.com" type="email" />
+              <FormField label="Full Name *" value={clientName} onChange={setClientName} placeholder="Your name" variant="client" />
+              <FormField label="Phone *" value={clientPhone} onChange={setClientPhone} placeholder="+7 000 000 00 00" type="tel" variant="client" />
+              <FormField label="Email (optional)" value={clientEmail} onChange={setClientEmail} placeholder="your@email.com" type="email" variant="client" />
             </div>
 
             <div className="flex gap-3">
@@ -217,20 +218,3 @@ export default function BookingFlowPage() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text' }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full p-3 border border-[var(--color-border)] text-[var(--color-text)] placeholder-gray-400 focus:outline-none focus:border-[var(--color-primary)] bg-[var(--color-surface)]"
-        style={{ borderRadius: 'var(--border-radius)' }}
-      />
-    </div>
-  );
-}

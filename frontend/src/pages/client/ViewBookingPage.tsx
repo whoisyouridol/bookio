@@ -5,6 +5,7 @@ import { getBooking, cancelBooking } from '@/api/bookings';
 import { Header } from '@/components/Header';
 import { Badge, bookingStatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { InfoRow } from '@/components/ui/InfoRow';
 import { Loader } from '@/components/ui/Loader';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -48,10 +49,10 @@ export default function ViewBookingPage() {
           style={{ borderRadius: 'var(--border-radius)' }}
         >
           <div className="p-4 space-y-3">
-            <Row icon={<MapPin className="w-4 h-4" />} value={booking.salonName} />
-            <Row icon={<User className="w-4 h-4" />} value={booking.masterName} />
-            <Row icon={<Calendar className="w-4 h-4" />} value={format(new Date(booking.bookingDate), 'EEEE, MMM d, yyyy')} />
-            <Row icon={<Clock className="w-4 h-4" />}
+            <InfoRow icon={<MapPin className="w-4 h-4" />} value={booking.salonName} />
+            <InfoRow icon={<User className="w-4 h-4" />} value={booking.masterName} />
+            <InfoRow icon={<Calendar className="w-4 h-4" />} value={format(new Date(booking.bookingDate), 'EEEE, MMM d, yyyy')} />
+            <InfoRow icon={<Clock className="w-4 h-4" />}
               value={`${booking.startTime.slice(0, 5)} – ${booking.endTime.slice(0, 5)}`} />
           </div>
 
@@ -91,11 +92,3 @@ export default function ViewBookingPage() {
   );
 }
 
-function Row({ icon, value }: { icon: React.ReactNode; value: string }) {
-  return (
-    <div className="flex items-center gap-3 text-sm text-[var(--color-text)]">
-      <span className="text-[var(--color-text-secondary)]">{icon}</span>
-      {value}
-    </div>
-  );
-}

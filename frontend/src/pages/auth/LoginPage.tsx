@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { GoogleLogin } from '@react-oauth/google';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getErrorMessage } from '@/lib/error';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -35,8 +36,7 @@ export default function LoginPage() {
       const user = await login(email, password);
       setRedirectTo(getRedirect(user.role));
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Invalid credentials';
-      toast.error(msg);
+      toast.error(getErrorMessage(err, 'Invalid credentials'));
     } finally {
       setLoading(false);
     }
@@ -53,9 +53,7 @@ export default function LoginPage() {
         loginWithFacebook(token)
           .then(user => setRedirectTo(getRedirect(user.role)))
           .catch((err: unknown) => {
-            const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-              ?? 'Facebook sign-in failed';
-            toast.error(msg);
+            toast.error(getErrorMessage(err, 'Facebook sign-in failed'));
           })
           .finally(() => setLoading(false));
       },
@@ -126,9 +124,7 @@ export default function LoginPage() {
                   const user = await loginWithGoogle(credentialResponse.credential);
                   setRedirectTo(getRedirect(user.role));
                 } catch (err: unknown) {
-                  const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-                    ?? 'Google sign-in failed';
-                  toast.error(msg);
+                  toast.error(getErrorMessage(err, 'Google sign-in failed'));
                 } finally {
                   setLoading(false);
                 }

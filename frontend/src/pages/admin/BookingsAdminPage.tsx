@@ -9,13 +9,13 @@ import { Loader } from '@/components/ui/Loader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
-import { useRole } from '@/contexts/RoleContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 
 const STATUSES = ['', 'Pending', 'Confirmed', 'Completed', 'CancelledByClient', 'CancelledByMaster'];
 
 export default function BookingsAdminPage() {
-  const { role, salonId, masterId } = useRole();
+  const { role, salonId, masterId } = useAuth();
   const { canAccessBooking } = useRoleAccess();
 
   const [filterSalon, setFilterSalon] = useState(role === 'salon_admin' ? (salonId ?? '') : '');

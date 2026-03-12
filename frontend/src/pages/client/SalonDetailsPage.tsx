@@ -6,6 +6,7 @@ import { getMasters } from '@/api/masters';
 import { Header } from '@/components/Header';
 import { MasterCard } from '@/components/master/MasterCard';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
+import { InfoRow } from '@/components/ui/InfoRow';
 import { Loader } from '@/components/ui/Loader';
 
 export default function SalonDetailsPage() {
@@ -48,13 +49,13 @@ export default function SalonDetailsPage() {
             className="bg-[var(--color-surface)] p-4 shadow-sm border border-[var(--color-border)] space-y-3"
             style={{ borderRadius: 'calc(var(--border-radius) * 1.2)' }}
           >
-            <Row icon={<MapPin className="w-5 h-5" />} label="Address" value={salon.address} />
-            <Row
+            <InfoRow icon={<MapPin className="w-5 h-5" />} label="Address" value={salon.address} />
+            <InfoRow
               icon={<Clock className="w-5 h-5" />}
               label="Working Hours"
               value={`${salon.workingHoursStart.slice(0, 5)} – ${salon.workingHoursEnd.slice(0, 5)}`}
             />
-            <Row
+            <InfoRow
               icon={<Calendar className="w-5 h-5" />}
               label="Working Days"
               value={salon.workingDays.join(', ')}
@@ -98,14 +99,3 @@ export default function SalonDetailsPage() {
   );
 }
 
-function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="text-[var(--color-text-secondary)] mt-0.5">{icon}</div>
-      <div>
-        <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
-        <p className="font-medium text-sm text-[var(--color-text)]">{value}</p>
-      </div>
-    </div>
-  );
-}

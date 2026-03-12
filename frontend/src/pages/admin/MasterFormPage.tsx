@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMaster, createMaster, updateMaster, getMasterServices, addMasterService, updateMasterService, removeMasterService } from '@/api/masters';
 import { getServices } from '@/api/services';
 import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/ui/FormField';
 import { DragDropUpload } from '@/components/ui/DragDropUpload';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { Loader } from '@/components/ui/Loader';
@@ -11,12 +12,12 @@ import { resolveMediaUrl } from '@/api/media';
 import { toast } from 'sonner';
 import { Plus, Trash2, Info, Edit2, Check, X } from 'lucide-react';
 import type { MasterServiceDto } from '@/types';
-import { useRole } from '@/contexts/RoleContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MasterFormPage() {
   const { masterId } = useParams<{ masterId: string }>();
   const isNew = !masterId || masterId === 'new';
-  const { role, masterId: ownMasterId } = useRole();
+  const { role, masterId: ownMasterId } = useAuth();
 
   // master_admin can only edit their own profile, not create new masters
   if (role === 'master_admin') {
@@ -148,10 +149,10 @@ export default function MasterFormPage() {
 
       <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="First Name *" value={firstName} onChange={setFirstName} required />
-          <Field label="Last Name *" value={lastName} onChange={setLastName} required />
+          <FormField label="First Name *" value={firstName} onChange={setFirstName} required />
+          <FormField label="Last Name *" value={lastName} onChange={setLastName} required />
         </div>
-        <Field label="Phone *" value={phone} onChange={setPhone} required />
+        <FormField label="Phone *" value={phone} onChange={setPhone} required />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Photo</label>
           <DragDropUpload folder="masters" accept="image" maxFiles={1} values={photoKeys} onChange={setPhotoKeys} />
@@ -356,14 +357,3 @@ export default function MasterFormPage() {
   );
 }
 
-function Field({ label, value, onChange, required = false }: {
-  label: string; value: string; onChange: (v: string) => void; required?: boolean;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} required={required}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
-    </div>
-  );
-}

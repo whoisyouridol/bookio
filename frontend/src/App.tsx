@@ -30,6 +30,7 @@ import BookingsAdminPage from '@/pages/admin/BookingsAdminPage';
 import BookingDetailAdminPage from '@/pages/admin/BookingDetailAdminPage';
 import UsersPage from '@/pages/admin/UsersPage';
 import UserDetailPage from '@/pages/admin/UserDetailPage';
+import NotFoundPage from '@/pages/client/NotFoundPage';
 
 const router = createBrowserRouter([
   // ── Auth routes ────────────────────────────────────────────────────────────
@@ -133,6 +134,9 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  // ── 404 catch-all ──────────────────────────────────────────────────────────
+  { path: '*', Component: NotFoundPage },
 ]);
 
 export default function App() {

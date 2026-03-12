@@ -3,10 +3,11 @@ import { useParams, useNavigate, Navigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSalon, createSalon, updateSalon } from '@/api/salons';
 import { Button } from '@/components/ui/Button';
+import { FormField } from '@/components/ui/FormField';
 import { DragDropUpload } from '@/components/ui/DragDropUpload';
 import { Loader } from '@/components/ui/Loader';
 import { toast } from 'sonner';
-import { useRole } from '@/contexts/RoleContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -15,7 +16,7 @@ export default function SalonFormPage() {
   const isNew = !salonId || salonId === 'new';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { role, salonId: ownSalonId } = useRole();
+  const { role, salonId: ownSalonId } = useAuth();
 
   // salon_admin can only edit their own salon, not create new ones
   if (role === 'salon_admin') {
@@ -87,14 +88,14 @@ export default function SalonFormPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{isNew ? 'New Salon' : 'Edit Salon'}</h1>
 
       <form onSubmit={e => { e.preventDefault(); mutation.mutate(); }} className="space-y-5">
-        <Field label="Name *" value={name} onChange={setName} required />
-        <Field label="Address *" value={address} onChange={setAddress} required />
-        <Field label="Google Maps URL" value={googleMapsUrl} onChange={setGoogleMapsUrl} />
-        <Field label="Yandex Maps URL" value={yandexMapsUrl} onChange={setYandexMapsUrl} />
+        <FormField label="Name *" value={name} onChange={setName} required />
+        <FormField label="Address *" value={address} onChange={setAddress} required />
+        <FormField label="Google Maps URL" value={googleMapsUrl} onChange={setGoogleMapsUrl} />
+        <FormField label="Yandex Maps URL" value={yandexMapsUrl} onChange={setYandexMapsUrl} />
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Opens at" value={hoursStart} onChange={setHoursStart} type="time" />
-          <Field label="Closes at" value={hoursEnd} onChange={setHoursEnd} type="time" />
+          <FormField label="Opens at" value={hoursStart} onChange={setHoursStart} type="time" />
+          <FormField label="Closes at" value={hoursEnd} onChange={setHoursEnd} type="time" />
         </div>
 
         <div>
@@ -139,20 +140,4 @@ export default function SalonFormPage() {
   );
 }
 
-function Field({ label, value, onChange, type = 'text', required = false }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        required={required}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-purple-500"
-      />
-    </div>
-  );
-}
 

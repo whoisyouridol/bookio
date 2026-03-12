@@ -1,8 +1,8 @@
 import { Outlet, useLocation } from 'react-router';
 import { useEffect } from 'react';
 import { BottomNav } from '@/components/BottomNav';
-import { ThemeProvider, useTheme } from '@/context/ThemeContext';
-import { BookingProvider } from '@/context/BookingContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { BookingProvider } from '@/contexts/BookingContext';
 
 
 function RootContent() {

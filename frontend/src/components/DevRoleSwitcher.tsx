@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRole, type Role } from '@/contexts/RoleContext';
+import { useAuth, type Role } from '@/contexts/AuthContext';
 
 interface RoleMeta {
   value: Role;
@@ -57,7 +57,9 @@ function metaFor(role: Role) {
 export function DevRoleSwitcher() {
   if (!import.meta.env.DEV) return null;
 
-  const { role, salonId, masterId, setRole } = useRole();
+  const { role, salonId, masterId } = useAuth();
+  // setRole is a no-op since role comes from JWT — kept for UI demonstration only
+  const setRole = (_role: Role, _entityId?: string) => {};
   const [open, setOpen] = useState(false);
   const [pendingRole, setPendingRole] = useState<Role>(role);
   const [entityId, setEntityId] = useState('');

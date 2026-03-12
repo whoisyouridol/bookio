@@ -9,12 +9,12 @@ import { Loader } from '@/components/ui/Loader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { toast } from 'sonner';
-import { useRole } from '@/contexts/RoleContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type { MasterDto } from '@/types';
 
 export default function MastersPage() {
   const queryClient = useQueryClient();
-  const { role, salonId } = useRole();
+  const { role, salonId } = useAuth();
 
   const { data: masters, isLoading: loadingMasters } = useQuery({
     queryKey: ['masters'],

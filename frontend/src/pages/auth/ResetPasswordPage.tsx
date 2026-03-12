@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { resetPassword } from '@/api/auth';
+import { getErrorMessage } from '@/lib/error';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -38,8 +39,7 @@ export default function ResetPasswordPage() {
       toast.success('Password reset successfully');
       navigate('/login', { replace: true });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Reset failed. The link may have expired.';
-      toast.error(msg);
+      toast.error(getErrorMessage(err, 'Reset failed. The link may have expired.'));
     } finally {
       setLoading(false);
     }

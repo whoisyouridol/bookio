@@ -6,13 +6,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { getSalons } from '@/api/salons';
 import { registerMaster, registerMasterWithGoogle, registerMasterWithFacebook } from '@/api/auth';
+import { getErrorMessage } from '@/lib/error';
 import type { SalonDto } from '@/types';
 
 type Step = 'select-salon' | 'register' | 'success';
-
-const extractError = (err: unknown) =>
-  (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-  ?? 'Something went wrong. Please try again.';
 
 export default function MasterRegisterPage() {
   const [step, setStep] = useState<Step>('select-salon');
@@ -47,7 +44,7 @@ export default function MasterRegisterPage() {
       await registerMaster({ email, password, firstName, lastName, phone: phone || undefined, salonId: selectedSalon.id });
       handleSuccess();
     } catch (err) {
-      toast.error(extractError(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -60,7 +57,7 @@ export default function MasterRegisterPage() {
       await registerMasterWithGoogle(credential, selectedSalon.id);
       handleSuccess();
     } catch (err) {
-      toast.error(extractError(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -78,7 +75,7 @@ export default function MasterRegisterPage() {
         setLoading(true);
         registerMasterWithFacebook(token, salonId)
           .then(() => handleSuccess())
-          .catch(err => toast.error(extractError(err)))
+          .catch(err => toast.error(getErrorMessage(err)))
           .finally(() => setLoading(false));
       },
       { scope: 'email,public_profile' }

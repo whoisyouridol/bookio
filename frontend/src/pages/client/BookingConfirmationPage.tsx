@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getBooking } from '@/api/bookings';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/Button';
+import { InfoRow } from '@/components/ui/InfoRow';
 import { Loader } from '@/components/ui/Loader';
 import { format } from 'date-fns';
 
@@ -100,11 +101,3 @@ export default function BookingConfirmationPage() {
   );
 }
 
-function InfoRow({ icon, value }: { icon: React.ReactNode; value: string }) {
-  return (
-    <div className="flex items-center gap-3 text-sm text-[var(--color-text)]">
-      <span className="text-[var(--color-text-secondary)]">{icon}</span>
-      {value}
-    </div>
-  );
-}

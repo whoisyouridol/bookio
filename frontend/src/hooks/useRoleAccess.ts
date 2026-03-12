@@ -1,8 +1,8 @@
-import { useRole } from '@/contexts/RoleContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type { BookingDto } from '@/types';
 
 export function useRoleAccess() {
-  const { role, salonId, masterId } = useRole();
+  const { role, salonId, masterId } = useAuth();
 
   /** SuperAdmin can access any salon; SalonAdmin only their own. */
   const canAccessSalon = (id: string): boolean => {

@@ -8,7 +8,7 @@ import { ReviewCard } from '@/components/master/ReviewCard';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { useBooking } from '@/context/BookingContext';
+import { useBooking } from '@/contexts/BookingContext';
 import type { MasterServiceDto } from '@/types';
 
 export default function MasterProfilePage() {
