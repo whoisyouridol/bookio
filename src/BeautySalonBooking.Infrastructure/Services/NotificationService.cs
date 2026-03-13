@@ -56,4 +56,20 @@ public class NotificationService : INotificationService
         _logger.LogInformation("TODO: Notify {Email} that their password was changed", email);
         return Task.CompletedTask;
     }
+
+    public Task SendMasterCredentialsAsync(string email, string temporaryPassword)
+    {
+        _logger.LogInformation(
+            "TODO: Send master credentials — Email: {Email} | Temporary password: {Password}",
+            email, temporaryPassword);
+        return Task.CompletedTask;
+    }
+
+    public Task SendAccountCredentialsAsync(string email, string temporaryPassword, string role)
+    {
+        _logger.LogInformation(
+            "TODO: Send account credentials — Role: {Role} | Email: {Email} | Temporary password: {Password}",
+            role, email, temporaryPassword);
+        return Task.CompletedTask;
+    }
 }

@@ -3,9 +3,10 @@ namespace BeautySalonBooking.Domain.Entities;
 public class Master
 {
     public Guid Id { get; set; }
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string Phone { get; set; } = string.Empty;
+
+    /// <summary>FK to AspNetUsers. Nullable to support legacy/seed masters without a linked account.</summary>
+    public Guid? UserId { get; set; }
+
     public string? Photo { get; set; }
     public string? Description { get; set; }
     public bool AutoApproveBookings { get; set; } = true;

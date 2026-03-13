@@ -1,5 +1,6 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Domain.Entities;
+using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,8 +30,8 @@ public class SalonMasterService
             existing.WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd);
             existing.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
             await _db.SaveChangesAsync();
-            var master = await _db.Masters.FindAsync(req.MasterId);
-            return (MapToDto(existing, master!), null);
+            var user = await GetMasterUserAsync(req.MasterId);
+            return (MapToDto(existing, user), null);
         }
 
         var sm = new SalonMaster
@@ -45,14 +46,13 @@ public class SalonMasterService
         _db.SalonMasters.Add(sm);
         await _db.SaveChangesAsync();
 
-        var m2 = await _db.Masters.FindAsync(req.MasterId);
-        return (MapToDto(sm, m2!), null);
+        var u2 = await GetMasterUserAsync(req.MasterId);
+        return (MapToDto(sm, u2), null);
     }
 
     public async Task<(SalonMasterDto? result, string? error)> UpdateAsync(Guid salonId, Guid masterId, UpdateSalonMasterRequest req)
     {
         var sm = await _db.SalonMasters
-            .Include(x => x.Master)
             .FirstOrDefaultAsync(x => x.SalonId == salonId && x.MasterId == masterId && x.IsActive);
 
         if (sm == null) return (null, "Salon-master link not found");
@@ -62,7 +62,8 @@ public class SalonMasterService
         sm.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
         await _db.SaveChangesAsync();
 
-        return (MapToDto(sm, sm.Master), null);
+        var user = await GetMasterUserAsync(masterId);
+        return (MapToDto(sm, user), null);
     }
 
     public async Task<bool> UnlinkAsync(Guid salonId, Guid masterId)
@@ -74,9 +75,13 @@ public class SalonMasterService
         return true;
     }
 
-    private static SalonMasterDto MapToDto(SalonMaster sm, Domain.Entities.Master master) => new(
+    private async Task<AppUser?> GetMasterUserAsync(Guid masterId) =>
+        await _db.Set<AppUser>().FirstOrDefaultAsync(u => u.MasterId == masterId);
+
+    private static SalonMasterDto MapToDto(SalonMaster sm, AppUser? user) => new(
         sm.Id, sm.SalonId, sm.MasterId,
-        master.FirstName, master.LastName,
+        user?.FirstName ?? string.Empty,
+        user?.LastName ?? string.Empty,
         sm.WorkingHoursStart.ToString("HH:mm"),
         sm.WorkingHoursEnd.ToString("HH:mm"),
         sm.WorkingDays.Select(d => d.ToString()).ToList(),

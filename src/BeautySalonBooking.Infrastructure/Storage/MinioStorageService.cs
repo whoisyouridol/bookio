@@ -2,6 +2,7 @@ using BeautySalonBooking.Application.Interfaces;
 using Microsoft.Extensions.Options;
 using Minio;
 using Minio.DataModel.Args;
+using Minio.Exceptions;
 
 namespace BeautySalonBooking.Infrastructure.Storage;
 
@@ -59,11 +60,19 @@ public class MinioStorageService : IStorageService
         return key;
     }
 
-    public Task<string> GetPresignedUrlAsync(string key, CancellationToken ct = default)
+    public async Task<(Stream stream, string contentType)> GetStreamAsync(string key, CancellationToken ct = default)
     {
-        return _public.PresignedGetObjectAsync(new PresignedGetObjectArgs()
+        var ms = new MemoryStream();
+        string contentType = "application/octet-stream";
+
+        var args = new GetObjectArgs()
             .WithBucket(_opts.BucketName)
             .WithObject(key)
-            .WithExpiry((int)TimeSpan.FromHours(24).TotalSeconds));
+            .WithCallbackStream((s, _) => s.CopyToAsync(ms));
+
+        var obj = await _internal.GetObjectAsync(args, ct);
+        contentType = obj.ContentType ?? contentType;
+        ms.Position = 0;
+        return (ms, contentType);
     }
 }

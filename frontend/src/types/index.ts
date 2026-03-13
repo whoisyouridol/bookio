@@ -37,6 +37,7 @@ export type UpdateSalonRequest = CreateSalonRequest;
 
 export interface MasterDto {
   id: string;
+  email: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -51,6 +52,7 @@ export interface MasterDto {
 }
 
 export interface CreateMasterRequest {
+  email: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -59,7 +61,18 @@ export interface CreateMasterRequest {
   autoApproveBookings: boolean;
 }
 
-export type UpdateMasterRequest = CreateMasterRequest;
+export interface UpdateMasterRequest {
+  photo?: string;
+  description?: string;
+  autoApproveBookings: boolean;
+}
+
+export interface CreateClientAccountRequest {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
 
 // ── SalonMaster ───────────────────────────────────────────────────────────────
 
@@ -246,6 +259,7 @@ export interface UserDto {
   role: string;
   salonId?: string;
   masterId?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface AdminUserDto {

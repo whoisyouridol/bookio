@@ -44,7 +44,8 @@ public record ResetPasswordRequest(string Email, string Token, string NewPasswor
 
 public record CreateAdminUserRequest(
     string Email,
-    string Password,
+    /// <summary>When null, a temporary password is auto-generated and MustChangePassword is set.</summary>
+    string? Password,
     string? FirstName,
     string? LastName,
     string? Phone,
@@ -79,7 +80,8 @@ public record UserDto(
     string? Phone,
     string Role,
     Guid? SalonId,
-    Guid? MasterId);
+    Guid? MasterId,
+    bool MustChangePassword = false);
 
 public record AdminUserDto(
     Guid Id,

@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { AuthResponse, UserDto, LoginRequest, RegisterRequest, AdminUserDto } from '@/types';
+import type { AuthResponse, UserDto, LoginRequest, RegisterRequest, AdminUserDto, CreateClientAccountRequest } from '@/types';
 
 export async function login(data: LoginRequest): Promise<AuthResponse> {
   const { data: res } = await apiClient.post<AuthResponse>('/auth/login', data);
@@ -97,4 +97,9 @@ export async function updateUserRole(id: string, data: {
 
 export async function deleteAdminUser(id: string): Promise<void> {
   await apiClient.delete(`/admin/users/${id}`);
+}
+
+export async function createClientAccount(data: CreateClientAccountRequest): Promise<AdminUserDto> {
+  const { data: res } = await apiClient.post<AdminUserDto>('/admin/users', { ...data, role: 'Client' });
+  return res;
 }

@@ -2,9 +2,10 @@ namespace BeautySalonBooking.Application.DTOs;
 
 public record MasterDto(
     Guid Id,
+    string Email,
     string FirstName,
     string LastName,
-    string Phone,
+    string? Phone,
     string? Photo,
     string? Description,
     bool AutoApproveBookings,
@@ -17,6 +18,7 @@ public record MasterDto(
 );
 
 public record CreateMasterRequest(
+    string Email,
     string FirstName,
     string LastName,
     string Phone,
@@ -26,9 +28,6 @@ public record CreateMasterRequest(
 );
 
 public record UpdateMasterRequest(
-    string FirstName,
-    string LastName,
-    string Phone,
     string? Photo,
     string? Description,
     bool AutoApproveBookings = true

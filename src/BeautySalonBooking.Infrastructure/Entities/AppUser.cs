@@ -23,6 +23,9 @@ public class AppUser : IdentityUser<Guid>
     /// <summary>False for newly registered masters pending SuperAdmin activation.</summary>
     public bool IsActive { get; set; } = true;
 
+    /// <summary>True when the account was created by an admin with a generated password — forces password change on first login.</summary>
+    public bool MustChangePassword { get; set; } = false;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];

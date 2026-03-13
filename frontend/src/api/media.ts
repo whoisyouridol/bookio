@@ -1,6 +1,6 @@
 import apiClient from './client';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_BASE = '/api';
 
 /**
  * If the value looks like an external URL, return it unchanged.

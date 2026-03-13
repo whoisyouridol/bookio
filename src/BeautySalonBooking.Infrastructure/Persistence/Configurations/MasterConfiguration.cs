@@ -9,9 +9,6 @@ public class MasterConfiguration : IEntityTypeConfiguration<Master>
     public void Configure(EntityTypeBuilder<Master> builder)
     {
         builder.HasKey(m => m.Id);
-        builder.Property(m => m.FirstName).IsRequired().HasMaxLength(100);
-        builder.Property(m => m.LastName).IsRequired().HasMaxLength(100);
-        builder.Property(m => m.Phone).IsRequired().HasMaxLength(20);
         builder.Property(m => m.Photo).HasMaxLength(1000);
         builder.Property(m => m.Description).HasMaxLength(2000);
 

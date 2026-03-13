@@ -1,40 +1,62 @@
+using System.Security.Cryptography;
 using BeautySalonBooking.Application.DTOs;
+using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
+using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
 
 public class MasterService
 {
     private readonly AppDbContext _db;
+    private readonly UserManager<AppUser> _userManager;
+    private readonly INotificationService _notifications;
+    private readonly ILogger<MasterService> _logger;
 
-    public MasterService(AppDbContext db) => _db = db;
+    // Word list for readable temporary passwords
+    private static readonly string[] PasswordWords =
+        ["Glow", "Star", "Bloom", "Luxe", "Charm", "Style", "Grace", "Nova", "Luna", "Jade"];
+
+    public MasterService(
+        AppDbContext db,
+        UserManager<AppUser> userManager,
+        INotificationService notifications,
+        ILogger<MasterService> logger)
+    {
+        _db = db;
+        _userManager = userManager;
+        _notifications = notifications;
+        _logger = logger;
+    }
 
     public async Task<List<MasterDto>> GetAllAsync()
     {
         var masters = await _db.Masters
-            .Where(m => !m.IsDeleted &&
-                        _db.Set<Entities.AppUser>()
-                            .Any(u => u.MasterId == m.Id &&
-                                      u.Role == AppRole.Master))
+            .Where(m => !m.IsDeleted)
             .Include(m => m.Ratings)
-            .OrderBy(m => m.LastName)
+            .OrderBy(m => m.Id)
             .ToListAsync();
 
         var masterIds = masters.Select(m => m.Id).ToList();
 
-        var userActiveMap = await _db.Set<Entities.AppUser>()
-            .Where(u =>
-                u.MasterId != null &&
-                masterIds.Contains(u.MasterId.Value) &&
-                u.Role == AppRole.Master)
-            .Select(u => new { u.MasterId, u.IsActive })
-            .ToDictionaryAsync(u => u.MasterId!.Value, u => u.IsActive);
+        // Load linked users for all masters in one query
+        var users = await _db.Set<AppUser>()
+            .Where(u => u.MasterId != null && masterIds.Contains(u.MasterId.Value) && u.Role == AppRole.Master)
+            .Select(u => new { u.MasterId, u.Email, u.FirstName, u.LastName, u.PhoneNumber, u.IsActive })
+            .ToListAsync();
 
+        var userByMaster = users.ToDictionary(u => u.MasterId!.Value);
+
+        // Only return masters that have a linked user (public-facing list)
         return masters
-            .Select(m => MapToDto(m, userActiveMap.GetValueOrDefault(m.Id, true)))
+            .Where(m => userByMaster.ContainsKey(m.Id))
+            .Select(m => MapToDto(m, userByMaster[m.Id].Email ?? string.Empty, userByMaster[m.Id].FirstName,
+                                  userByMaster[m.Id].LastName, userByMaster[m.Id].PhoneNumber, userByMaster[m.Id].IsActive))
             .ToList();
     }
 
@@ -46,24 +68,25 @@ public class MasterService
 
         if (master == null) return null;
 
-        var isUserActive = await _db.Set<Entities.AppUser>()
+        var user = await _db.Set<AppUser>()
             .Where(u => u.MasterId == id)
-            .Select(u => u.IsActive)
+            .Select(u => new { u.Email, u.FirstName, u.LastName, u.PhoneNumber, u.IsActive })
             .FirstOrDefaultAsync();
 
-        // If no linked user exists (manually created master), treat as active
-        var hasUser = await _db.Set<Entities.AppUser>().AnyAsync(u => u.MasterId == id);
-        return MapToDto(master, !hasUser || isUserActive);
+        // If no linked user exists (e.g. seed master), treat as active with empty name
+        return MapToDto(master, user?.Email ?? string.Empty, user?.FirstName, user?.LastName, user?.PhoneNumber, user?.IsActive ?? true);
     }
 
-    public async Task<MasterDto> CreateAsync(CreateMasterRequest req)
+    public async Task<(MasterDto? result, string? error)> CreateAsync(CreateMasterRequest req)
     {
+        if (await _userManager.FindByEmailAsync(req.Email) != null)
+            return (null, "An account with this email is already registered");
+
+        var tempPassword = GenerateTemporaryPassword();
+
         var master = new Master
         {
             Id = Guid.NewGuid(),
-            FirstName = req.FirstName,
-            LastName = req.LastName,
-            Phone = req.Phone,
             Photo = req.Photo,
             Description = req.Description,
             AutoApproveBookings = req.AutoApproveBookings,
@@ -71,8 +94,32 @@ public class MasterService
             UpdatedAt = DateTime.UtcNow,
         };
         _db.Masters.Add(master);
+
+        var user = new AppUser
+        {
+            UserName = req.Email,
+            Email = req.Email,
+            EmailConfirmed = true,
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            PhoneNumber = req.Phone,
+            Role = AppRole.Master,
+            MasterId = master.Id,
+            IsActive = true,
+            MustChangePassword = true,
+        };
+
+        var result = await _userManager.CreateAsync(user, tempPassword);
+        if (!result.Succeeded)
+            return (null, string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        master.UserId = user.Id;
         await _db.SaveChangesAsync();
-        return MapToDto(master);
+
+        await _notifications.SendMasterCredentialsAsync(req.Email, tempPassword);
+        _logger.LogInformation("Master created by admin: {Email} | Temp password: {Password}", req.Email, tempPassword);
+
+        return (MapToDto(master, user.Email ?? string.Empty, user.FirstName, user.LastName, user.PhoneNumber, user.IsActive), null);
     }
 
     public async Task<MasterDto?> UpdateAsync(Guid id, UpdateMasterRequest req)
@@ -80,16 +127,18 @@ public class MasterService
         var master = await _db.Masters.Include(m => m.Ratings).FirstOrDefaultAsync(m => m.Id == id);
         if (master == null) return null;
 
-        master.FirstName = req.FirstName;
-        master.LastName = req.LastName;
-        master.Phone = req.Phone;
         master.Photo = req.Photo;
         master.Description = req.Description;
         master.AutoApproveBookings = req.AutoApproveBookings;
         master.UpdatedAt = DateTime.UtcNow;
-
         await _db.SaveChangesAsync();
-        return MapToDto(master);
+
+        var user = await _db.Set<AppUser>()
+            .Where(u => u.MasterId == id)
+            .Select(u => new { u.Email, u.FirstName, u.LastName, u.PhoneNumber, u.IsActive })
+            .FirstOrDefaultAsync();
+
+        return MapToDto(master, user?.Email ?? string.Empty, user?.FirstName, user?.LastName, user?.PhoneNumber, user?.IsActive ?? true);
     }
 
     public async Task<bool> DeleteAsync(Guid id)
@@ -131,9 +180,45 @@ public class MasterService
         return new AverageRatingDto(ratings.Average(r => r.Rating), ratings.Count);
     }
 
-    private static MasterDto MapToDto(Master m, bool isUserActive = true)
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static MasterDto MapToDto(Master m, string email, string? firstName, string? lastName, string? phone, bool isUserActive)
     {
         var avg = m.Ratings.Any() ? (double?)m.Ratings.Average(r => r.Rating) : null;
-        return new MasterDto(m.Id, m.FirstName, m.LastName, m.Phone, m.Photo, m.Description, m.AutoApproveBookings, m.IsDeleted, isUserActive, m.CreatedAt, avg, m.Ratings.Count);
+        return new MasterDto(
+            m.Id,
+            email,
+            firstName ?? string.Empty,
+            lastName ?? string.Empty,
+            phone,
+            m.Photo,
+            m.Description,
+            m.AutoApproveBookings,
+            m.IsDeleted,
+            isUserActive,
+            m.CreatedAt,
+            avg,
+            m.Ratings.Count);
+    }
+
+    private static string GenerateTemporaryPassword()
+    {
+        var rng = RandomNumberGenerator.Create();
+
+        var wordBuf = new byte[1];
+        rng.GetBytes(wordBuf);
+        var word = PasswordWords[wordBuf[0] % PasswordWords.Length];
+
+        var digitsBuf = new byte[2];
+        rng.GetBytes(digitsBuf);
+        var digits = (digitsBuf[0] % 90 + 10).ToString() + (digitsBuf[1] % 10).ToString();
+
+        // Append one special char to meet common complexity rules
+        const string specials = "!@#";
+        var specBuf = new byte[1];
+        rng.GetBytes(specBuf);
+        var special = specials[specBuf[0] % specials.Length];
+
+        return $"{word}{digits}{special}";
     }
 }

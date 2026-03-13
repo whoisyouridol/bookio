@@ -12,8 +12,13 @@ namespace BeautySalonBooking.API.Controllers;
 public class AdminUsersController : ControllerBase
 {
     private readonly AuthService _auth;
+    private readonly MasterService _masters;
 
-    public AdminUsersController(AuthService auth) => _auth = auth;
+    public AdminUsersController(AuthService auth, MasterService masters)
+    {
+        _auth = auth;
+        _masters = masters;
+    }
 
     /// <summary>List all users, optionally filtered by role (SuperAdmin, SalonAdmin, MasterAdmin, Client)</summary>
     [HttpGet]
@@ -64,10 +69,16 @@ public class AdminUsersController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
-    /// <summary>Delete a user</summary>
+    /// <summary>Delete a user. If the user is a master, soft-deletes the linked master record first.</summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var user = await _auth.GetUserAsync(id);
+        if (user == null) return NotFound();
+
+        if (user.MasterId.HasValue)
+            await _masters.DeleteAsync(user.MasterId.Value);
+
         var deleted = await _auth.DeleteUserAsync(id);
         return deleted ? NoContent() : NotFound();
     }

@@ -46,7 +46,7 @@ public class MediaController : ControllerBase
         return Ok(new { key });
     }
 
-    /// <summary>Redirect to a 24-hour presigned URL for the given object key.</summary>
+    /// <summary>Stream the media file for the given object key.</summary>
     [AllowAnonymous]
     [HttpGet("{**key}")]
     public async Task<IActionResult> Get(string key, CancellationToken ct)
@@ -54,8 +54,16 @@ public class MediaController : ControllerBase
         if (string.IsNullOrWhiteSpace(key))
             return BadRequest();
 
-        var url = await _storage.GetPresignedUrlAsync(key, ct);
-        return Redirect(url);
+        try
+        {
+            var (stream, contentType) = await _storage.GetStreamAsync(key, ct);
+            Response.Headers.CacheControl = "public, max-age=86400";
+            return File(stream, contentType);
+        }
+        catch
+        {
+            return NotFound();
+        }
     }
 }
 

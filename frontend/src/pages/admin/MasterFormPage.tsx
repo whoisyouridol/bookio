@@ -41,10 +41,12 @@ export default function MasterFormPage() {
 
   const { data: catalog } = useQuery({ queryKey: ['services'], queryFn: getServices });
 
+  const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [photoKeys, setPhotoKeys] = useState<string[]>([]);
+
   const [description, setDescription] = useState('');
   const [autoApproveBookings, setAutoApproveBookings] = useState(true);
 
@@ -65,9 +67,6 @@ export default function MasterFormPage() {
 
   useEffect(() => {
     if (existing) {
-      setFirstName(existing.firstName);
-      setLastName(existing.lastName);
-      setPhone(existing.phone);
       setPhotoKeys(existing.photo ? [existing.photo] : []);
       setDescription(existing.description ?? '');
       setAutoApproveBookings(existing.autoApproveBookings);
@@ -90,15 +89,20 @@ export default function MasterFormPage() {
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const payload = { firstName, lastName, phone, photo: photoKeys[0] || undefined, description: description || undefined, autoApproveBookings };
-      return isNew ? createMaster(payload) : updateMaster(masterId!, payload);
+      if (isNew) {
+        return createMaster({ email, firstName, lastName, phone, photo: photoKeys[0] || undefined, description: description || undefined, autoApproveBookings });
+      }
+      return updateMaster(masterId!, { photo: photoKeys[0] || undefined, description: description || undefined, autoApproveBookings });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['masters'] });
       toast.success(isNew ? 'Master created!' : 'Master updated!');
       navigate('/admin/masters');
     },
-    onError: () => toast.error('Failed to save.'),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast.error(msg ?? 'Failed to save.');
+    },
   });
 
   const addServiceMutation = useMutation({
@@ -148,11 +152,24 @@ export default function MasterFormPage() {
       <h1 className="text-2xl font-bold text-gray-900">{isNew ? 'New Master' : 'Edit Master'}</h1>
 
       <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="First Name *" value={firstName} onChange={setFirstName} required />
-          <FormField label="Last Name *" value={lastName} onChange={setLastName} required />
-        </div>
-        <FormField label="Phone *" value={phone} onChange={setPhone} required />
+        {isNew ? (
+          <>
+            <FormField label="Email *" type="email" value={email} onChange={setEmail} required />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="First Name *" value={firstName} onChange={setFirstName} required />
+              <FormField label="Last Name *" value={lastName} onChange={setLastName} required />
+            </div>
+            <FormField label="Phone *" value={phone} onChange={setPhone} required />
+          </>
+        ) : (
+          existing && (
+            <div className="bg-gray-50 rounded-lg px-4 py-3 text-sm text-gray-600 space-y-0.5">
+              <p className="font-medium text-gray-900">{existing.firstName} {existing.lastName}</p>
+              <p className="text-xs text-gray-400">{existing.email}</p>
+              <p className="text-xs text-gray-400 mt-1">To edit name, email or phone — use the <strong>Account</strong> tab in Accounts.</p>
+            </div>
+          )
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Photo</label>
           <DragDropUpload folder="masters" accept="image" maxFiles={1} values={photoKeys} onChange={setPhotoKeys} />

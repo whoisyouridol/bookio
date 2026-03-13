@@ -1,5 +1,6 @@
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Domain.Entities;
+using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,14 +22,17 @@ public class SalonService
     {
         var salon = await _db.Salons
             .Include(s => s.SalonMasters.Where(sm => sm.IsActive))
-                .ThenInclude(sm => sm.Master)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (salon == null) return null;
 
+        var masterIds = salon.SalonMasters.Select(sm => sm.MasterId).ToList();
+        var userByMaster = await GetUsersByMasterIdsAsync(masterIds);
+
         var masters = salon.SalonMasters.Select(sm => new SalonMasterDto(
             sm.Id, sm.SalonId, sm.MasterId,
-            sm.Master.FirstName, sm.Master.LastName,
+            userByMaster.GetValueOrDefault(sm.MasterId)?.FirstName ?? string.Empty,
+            userByMaster.GetValueOrDefault(sm.MasterId)?.LastName ?? string.Empty,
             sm.WorkingHoursStart.ToString("HH:mm"),
             sm.WorkingHoursEnd.ToString("HH:mm"),
             sm.WorkingDays.Select(d => d.ToString()).ToList(),
@@ -99,19 +103,27 @@ public class SalonService
     public async Task<List<SalonMasterDto>> GetMastersAsync(Guid salonId)
     {
         var sms = await _db.SalonMasters
-            .Include(sm => sm.Master)
             .Where(sm => sm.SalonId == salonId && sm.IsActive)
             .ToListAsync();
 
+        var masterIds = sms.Select(sm => sm.MasterId).ToList();
+        var userByMaster = await GetUsersByMasterIdsAsync(masterIds);
+
         return sms.Select(sm => new SalonMasterDto(
             sm.Id, sm.SalonId, sm.MasterId,
-            sm.Master.FirstName, sm.Master.LastName,
+            userByMaster.GetValueOrDefault(sm.MasterId)?.FirstName ?? string.Empty,
+            userByMaster.GetValueOrDefault(sm.MasterId)?.LastName ?? string.Empty,
             sm.WorkingHoursStart.ToString("HH:mm"),
             sm.WorkingHoursEnd.ToString("HH:mm"),
             sm.WorkingDays.Select(d => d.ToString()).ToList(),
             sm.IsActive
         )).ToList();
     }
+
+    private async Task<Dictionary<Guid, AppUser>> GetUsersByMasterIdsAsync(List<Guid> masterIds) =>
+        await _db.Set<AppUser>()
+            .Where(u => u.MasterId != null && masterIds.Contains(u.MasterId.Value))
+            .ToDictionaryAsync(u => u.MasterId!.Value);
 
     public async Task<List<MasterServiceDto>> GetServicesAsync(Guid salonId)
     {

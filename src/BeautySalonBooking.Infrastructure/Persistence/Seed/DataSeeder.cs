@@ -17,6 +17,7 @@ public static class DataSeeder
         ILogger logger)
     {
         await SeedSuperAdminsAsync(userManager, configuration, logger);
+        await LinkExistingMasterUsersAsync(context, logger);
 
         if (await context.Salons.AnyAsync()) return;
 
@@ -49,13 +50,41 @@ public static class DataSeeder
             Olga   = Guid.Parse("22222222-0000-0000-0000-000000000003"),
         };
 
+        // Seed user IDs for demo masters
+        var masterUserIds = new
+        {
+            Anna  = Guid.Parse("55555555-0000-0000-0000-000000000001"),
+            Maria = Guid.Parse("55555555-0000-0000-0000-000000000002"),
+            Olga  = Guid.Parse("55555555-0000-0000-0000-000000000003"),
+        };
+
         var masters = new List<Master>
         {
-            new() { Id = masterIds.Anna,  FirstName = "Ashley",  LastName = "Morgan",   Phone = "+14155550101", Photo = "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&face", Description = "Hair specialist with 8 years of experience based in San Francisco. Specializes in balayage, highlights and creative color transformations.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new() { Id = masterIds.Maria, FirstName = "Jessica", LastName = "Williams",  Phone = "+14155550102", Photo = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&face", Description = "Certified nail technician and beauty artist with 6 years in the industry. Expert in gel extensions, nail art and pedicure treatments.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new() { Id = masterIds.Olga,  FirstName = "Lauren",  LastName = "Davis",    Phone = "+14155550103", Photo = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&face", Description = "Versatile beauty professional with 5 years of experience across hair styling, nail care and precision brow shaping.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new() { Id = masterIds.Anna,  UserId = masterUserIds.Anna,  Photo = "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&face", Description = "Hair specialist with 8 years of experience based in San Francisco. Specializes in balayage, highlights and creative color transformations.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new() { Id = masterIds.Maria, UserId = masterUserIds.Maria, Photo = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&face", Description = "Certified nail technician and beauty artist with 6 years in the industry. Expert in gel extensions, nail art and pedicure treatments.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new() { Id = masterIds.Olga,  UserId = masterUserIds.Olga,  Photo = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&face", Description = "Versatile beauty professional with 5 years of experience across hair styling, nail care and precision brow shaping.", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
         };
         await context.Masters.AddRangeAsync(masters);
+
+        // Create linked AppUser accounts for the demo masters
+        await userManager.CreateAsync(new AppUser
+        {
+            Id = masterUserIds.Anna, UserName = "ashley.morgan@glow.demo", Email = "ashley.morgan@glow.demo",
+            EmailConfirmed = true, FirstName = "Ashley", LastName = "Morgan", PhoneNumber = "+14155550101",
+            Role = AppRole.Master, MasterId = masterIds.Anna, IsActive = true, MustChangePassword = false,
+        }, "Demo1234!");
+        await userManager.CreateAsync(new AppUser
+        {
+            Id = masterUserIds.Maria, UserName = "jessica.williams@glow.demo", Email = "jessica.williams@glow.demo",
+            EmailConfirmed = true, FirstName = "Jessica", LastName = "Williams", PhoneNumber = "+14155550102",
+            Role = AppRole.Master, MasterId = masterIds.Maria, IsActive = true, MustChangePassword = false,
+        }, "Demo1234!");
+        await userManager.CreateAsync(new AppUser
+        {
+            Id = masterUserIds.Olga, UserName = "lauren.davis@glow.demo", Email = "lauren.davis@glow.demo",
+            EmailConfirmed = true, FirstName = "Lauren", LastName = "Davis", PhoneNumber = "+14155550103",
+            Role = AppRole.Master, MasterId = masterIds.Olga, IsActive = true, MustChangePassword = false,
+        }, "Demo1234!");
 
         // --- Salons ---
         var salonIds = new
@@ -223,6 +252,35 @@ public static class DataSeeder
                 logger.LogWarning("Failed to seed SuperAdmin {Email}: {Errors}",
                     entry.Email, string.Join(", ", result.Errors.Select(e => e.Description)));
         }
+    }
+
+    /// <summary>
+    /// Back-fills Master.UserId for any existing master records that don't have one yet
+    /// (handles DB that existed before the UserId column was added).
+    /// </summary>
+    private static async Task LinkExistingMasterUsersAsync(AppDbContext context, ILogger logger)
+    {
+        var unlinked = await context.Masters
+            .Where(m => m.UserId == null)
+            .ToListAsync();
+
+        if (unlinked.Count == 0) return;
+
+        var users = await context.Set<AppUser>()
+            .Where(u => u.MasterId != null)
+            .Select(u => new { u.Id, u.MasterId })
+            .ToListAsync();
+
+        var userByMaster = users.ToDictionary(u => u.MasterId!.Value, u => u.Id);
+
+        foreach (var master in unlinked)
+        {
+            if (userByMaster.TryGetValue(master.Id, out var userId))
+                master.UserId = userId;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Back-filled UserId for {Count} master(s).", unlinked.Count);
     }
 
     private class SuperAdminSeedEntry

@@ -37,18 +37,19 @@ public class MastersController : ControllerBase
         return master == null ? NotFound() : Ok(master);
     }
 
-    /// <summary>Create a new master</summary>
+    /// <summary>Create a new master (admin-initiated — generates a temporary password and emails credentials)</summary>
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMasterRequest req)
     {
         var validation = await _createValidator.ValidateAsync(req);
         if (!validation.IsValid) return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
-        var result = await _masterService.CreateAsync(req);
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        var (result, error) = await _masterService.CreateAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return CreatedAtAction(nameof(GetById), new { id = result!.Id }, result);
     }
 
-    /// <summary>Update master info</summary>
+    /// <summary>Update master profile</summary>
     [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMasterRequest req)

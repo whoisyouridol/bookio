@@ -8,10 +8,10 @@ import { toast } from 'sonner';
 const allNav: { to: string; label: string; icon: React.ElementType; exact?: boolean; roles: Role[] }[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['superadmin'] },
   { to: '/admin/salons', label: 'Salons', icon: Building2, roles: ['superadmin'] },
-  { to: '/admin/masters', label: 'Masters', icon: Users, roles: ['superadmin', 'salon_admin', 'master_admin'] },
+  { to: '/admin/masters', label: 'Masters', icon: Users, roles: ['master_admin'] },
   { to: '/admin/services', label: 'Services', icon: Scissors, roles: ['superadmin', 'salon_admin'] },
   { to: '/admin/bookings', label: 'Bookings', icon: Calendar, roles: ['superadmin', 'salon_admin', 'master_admin'] },
-  { to: '/admin/users', label: 'Users', icon: ShieldCheck, roles: ['superadmin'] },
+  { to: '/admin/users', label: 'Accounts', icon: ShieldCheck, roles: ['superadmin'] },
 ];
 
 const ROLE_LABELS: Record<Role, string> = {

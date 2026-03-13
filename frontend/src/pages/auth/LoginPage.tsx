@@ -24,7 +24,8 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, redirectTo, navigate]);
 
-  const getRedirect = (role: string) => {
+  const getRedirect = (role: string, mustChangePassword?: boolean) => {
+    if (mustChangePassword) return '/auth/force-change-password';
     if (from) return from;
     return role === 'Client' ? '/' : '/admin';
   };
@@ -34,7 +35,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      setRedirectTo(getRedirect(user.role));
+      setRedirectTo(getRedirect(user.role, user.mustChangePassword));
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Invalid credentials'));
     } finally {
@@ -51,7 +52,7 @@ export default function LoginPage() {
         const token = res.authResponse.accessToken;
         setLoading(true);
         loginWithFacebook(token)
-          .then(user => setRedirectTo(getRedirect(user.role)))
+          .then(user => setRedirectTo(getRedirect(user.role, user.mustChangePassword)))
           .catch((err: unknown) => {
             toast.error(getErrorMessage(err, 'Facebook sign-in failed'));
           })
@@ -122,7 +123,7 @@ export default function LoginPage() {
                 setLoading(true);
                 try {
                   const user = await loginWithGoogle(credentialResponse.credential);
-                  setRedirectTo(getRedirect(user.role));
+                  setRedirectTo(getRedirect(user.role, user.mustChangePassword));
                 } catch (err: unknown) {
                   toast.error(getErrorMessage(err, 'Google sign-in failed'));
                 } finally {

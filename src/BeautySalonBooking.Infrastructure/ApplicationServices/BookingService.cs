@@ -2,6 +2,7 @@ using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
+using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +23,6 @@ public class BookingService
     {
         var query = _db.Bookings
             .Include(b => b.Salon)
-            .Include(b => b.Master)
             .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
             .AsQueryable();
 
@@ -36,30 +36,32 @@ public class BookingService
             query = query.Where(b => b.BookingDate <= dateTo);
 
         var bookings = await query.OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime).ToListAsync();
-        return bookings.Select(MapToDto).ToList();
+        var masterNames = await GetMasterNamesAsync(bookings.Select(b => b.MasterId).Distinct());
+        return bookings.Select(b => MapToDto(b, masterNames.GetValueOrDefault(b.MasterId, ""))).ToList();
     }
 
     public async Task<BookingDto?> GetByIdAsync(Guid id)
     {
         var b = await _db.Bookings
             .Include(x => x.Salon)
-            .Include(x => x.Master)
             .Include(x => x.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
             .FirstOrDefaultAsync(x => x.Id == id);
 
-        return b == null ? null : MapToDto(b);
+        if (b == null) return null;
+        var masterNames = await GetMasterNamesAsync([b.MasterId]);
+        return MapToDto(b, masterNames.GetValueOrDefault(b.MasterId, ""));
     }
 
     public async Task<List<BookingDto>> GetMyBookingsAsync(Guid userId)
     {
         var bookings = await _db.Bookings
             .Include(b => b.Salon)
-            .Include(b => b.Master)
             .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
             .Where(b => b.UserId == userId)
             .OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime)
             .ToListAsync();
-        return bookings.Select(MapToDto).ToList();
+        var masterNames = await GetMasterNamesAsync(bookings.Select(b => b.MasterId).Distinct());
+        return bookings.Select(b => MapToDto(b, masterNames.GetValueOrDefault(b.MasterId, ""))).ToList();
     }
 
     public async Task<(BookingDto? result, string? error)> CreateAsync(CreateBookingRequest req, Guid? userId = null)
@@ -162,11 +164,12 @@ public class BookingService
             await _notifications.SendBookingPendingApprovalAsync(booking.Id);
 
         var created = await _db.Bookings
-            .Include(b => b.Salon).Include(b => b.Master)
+            .Include(b => b.Salon)
             .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
             .FirstAsync(b => b.Id == booking.Id);
 
-        return (MapToDto(created), null);
+        var createdNames = await GetMasterNamesAsync([created.MasterId]);
+        return (MapToDto(created, createdNames.GetValueOrDefault(created.MasterId, "")), null);
     }
 
     public async Task<(BookingDto? result, string? error)> ConfirmAsync(Guid id)
@@ -181,7 +184,8 @@ public class BookingService
 
         await _notifications.SendBookingConfirmedAsync(booking.Id);
 
-        return (MapToDto(booking), null);
+        var names1 = await GetMasterNamesAsync([booking.MasterId]);
+        return (MapToDto(booking, names1.GetValueOrDefault(booking.MasterId, "")), null);
     }
 
     public async Task<(BookingDto? result, string? error)> CompleteAsync(Guid id)
@@ -200,7 +204,8 @@ public class BookingService
 
         await _notifications.SendBookingCompletedAsync(booking.Id);
 
-        return (MapToDto(booking), null);
+        var names2 = await GetMasterNamesAsync([booking.MasterId]);
+        return (MapToDto(booking, names2.GetValueOrDefault(booking.MasterId, "")), null);
     }
 
     public async Task<(BookingDto? result, string? error)> CancelAsync(Guid id, CancelBookingRequest req)
@@ -233,7 +238,8 @@ public class BookingService
         await _db.SaveChangesAsync();
         await _notifications.SendBookingCancelledAsync(booking.Id, side);
 
-        return (MapToDto(booking), null);
+        var names3 = await GetMasterNamesAsync([booking.MasterId]);
+        return (MapToDto(booking, names3.GetValueOrDefault(booking.MasterId, "")), null);
     }
 
     public async Task<List<BookingDto>> GetBySalonAsync(Guid salonId)
@@ -243,13 +249,23 @@ public class BookingService
         => await GetAllAsync(new BookingFilterRequest(null, masterId, null, null, null));
 
     private async Task<Booking?> LoadFullAsync(Guid id) => await _db.Bookings
-        .Include(b => b.Salon).Include(b => b.Master)
+        .Include(b => b.Salon)
         .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
         .FirstOrDefaultAsync(b => b.Id == id);
 
-    private static BookingDto MapToDto(Booking b) => new(
+    private async Task<Dictionary<Guid, string>> GetMasterNamesAsync(IEnumerable<Guid> masterIds)
+    {
+        var ids = masterIds.ToList();
+        return await _db.Set<AppUser>()
+            .Where(u => u.MasterId != null && ids.Contains(u.MasterId.Value))
+            .ToDictionaryAsync(
+                u => u.MasterId!.Value,
+                u => $"{u.FirstName} {u.LastName}".Trim());
+    }
+
+    private static BookingDto MapToDto(Booking b, string masterName) => new(
         b.Id, b.SalonId, b.Salon.Name,
-        b.MasterId, $"{b.Master.FirstName} {b.Master.LastName}",
+        b.MasterId, masterName,
         b.ClientName, b.ClientPhone, b.ClientEmail,
         b.BookingDate.ToString("yyyy-MM-dd"),
         b.StartTime.ToString("HH:mm"),

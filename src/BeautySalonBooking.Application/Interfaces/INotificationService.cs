@@ -27,4 +27,10 @@ public interface INotificationService
 
     /// <summary>Notifies the user that their password was changed successfully.</summary>
     Task SendPasswordChangedAsync(string email);
+
+    /// <summary>Sends generated credentials to a master created by an admin.</summary>
+    Task SendMasterCredentialsAsync(string email, string temporaryPassword);
+
+    /// <summary>Sends generated credentials to any account created by an admin.</summary>
+    Task SendAccountCredentialsAsync(string email, string temporaryPassword, string role);
 }
