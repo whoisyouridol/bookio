@@ -1,4 +1,4 @@
-import type { MasterDto, CreateMasterRequest, UpdateMasterRequest, MasterServiceDto, RatingDto, AverageRatingDto, AddMasterServiceRequest, UpdateMasterServiceRequest } from '@/types';
+import type { MasterDto, CreateMasterRequest, UpdateMasterRequest, MasterServiceDto, RatingDto, AverageRatingDto, AddMasterServiceRequest, UpdateMasterServiceRequest, SalonMasterWithSalonDto } from '@/types';
 import apiClient from './client';
 
 export const getMasters = () =>
@@ -33,3 +33,6 @@ export const getMasterRatings = (masterId: string) =>
 
 export const getMasterAverageRating = (masterId: string) =>
   apiClient.get<AverageRatingDto>(`/masters/${masterId}/average-rating`).then(r => r.data);
+
+export const getMasterSalons = (masterId: string) =>
+  apiClient.get<SalonMasterWithSalonDto[]>(`/masters/${masterId}/salons`).then(r => r.data);

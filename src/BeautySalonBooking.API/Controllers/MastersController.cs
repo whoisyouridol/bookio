@@ -11,14 +11,17 @@ namespace BeautySalonBooking.API.Controllers;
 public class MastersController : ControllerBase
 {
     private readonly MasterService _masterService;
+    private readonly SalonMasterService _salonMasterService;
     private readonly IValidator<CreateMasterRequest> _createValidator;
     private readonly IValidator<UpdateMasterRequest> _updateValidator;
 
     public MastersController(MasterService masterService,
+        SalonMasterService salonMasterService,
         IValidator<CreateMasterRequest> createValidator,
         IValidator<UpdateMasterRequest> updateValidator)
     {
         _masterService = masterService;
+        _salonMasterService = salonMasterService;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
     }
@@ -73,6 +76,11 @@ public class MastersController : ControllerBase
     [AllowAnonymous]
     [HttpGet("{id:guid}/services")]
     public async Task<IActionResult> GetServices(Guid id) => Ok(await _masterService.GetServicesAsync(id));
+
+    /// <summary>Get salon-master links for this master (with salon names)</summary>
+    [Authorize]
+    [HttpGet("{id:guid}/salons")]
+    public async Task<IActionResult> GetSalons(Guid id) => Ok(await _salonMasterService.GetByMasterAsync(id));
 
     /// <summary>Get master's average rating</summary>
     [AllowAnonymous]

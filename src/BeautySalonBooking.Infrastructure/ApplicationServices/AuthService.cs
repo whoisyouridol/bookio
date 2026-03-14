@@ -387,6 +387,54 @@ public class AuthService
         if (!Enum.TryParse<AppRole>(req.Role, out var role) || role == AppRole.SuperAdmin)
             return (null, "Invalid role");
 
+        // Validate referenced entities exist
+        if (req.SalonId.HasValue)
+        {
+            var salonExists = await _db.Salons.AnyAsync(s => s.Id == req.SalonId.Value && s.IsActive);
+            if (!salonExists) return (null, "Salon not found");
+        }
+
+        if (req.MasterId.HasValue)
+        {
+            var masterExists = await _db.Masters.AnyAsync(m => m.Id == req.MasterId.Value && !m.IsDeleted);
+            if (!masterExists) return (null, "Master not found");
+        }
+
+        // If assigning MasterAdmin role with both salon and master → ensure SalonMaster link exists
+        if (role == AppRole.Master && req.SalonId.HasValue && req.MasterId.HasValue)
+        {
+            var linkExists = await _db.SalonMasters
+                .AnyAsync(sm => sm.SalonId == req.SalonId.Value && sm.MasterId == req.MasterId.Value);
+
+            if (!linkExists)
+            {
+                // Create a SalonMaster link with salon defaults
+                var salon = await _db.Salons.FirstAsync(s => s.Id == req.SalonId.Value);
+                _db.SalonMasters.Add(new Domain.Entities.SalonMaster
+                {
+                    Id = Guid.NewGuid(),
+                    SalonId = req.SalonId.Value,
+                    MasterId = req.MasterId.Value,
+                    WorkingHoursStart = salon.WorkingHoursStart,
+                    WorkingHoursEnd = salon.WorkingHoursEnd,
+                    WorkingDays = salon.WorkingDays.ToList(),
+                    IsActive = true,
+                });
+                await _db.SaveChangesAsync();
+            }
+            else
+            {
+                // Re-activate if soft-deleted
+                var link = await _db.SalonMasters
+                    .FirstAsync(sm => sm.SalonId == req.SalonId.Value && sm.MasterId == req.MasterId.Value);
+                if (!link.IsActive)
+                {
+                    link.IsActive = true;
+                    await _db.SaveChangesAsync();
+                }
+            }
+        }
+
         user.Role = role;
         user.SalonId = req.SalonId;
         user.MasterId = req.MasterId;

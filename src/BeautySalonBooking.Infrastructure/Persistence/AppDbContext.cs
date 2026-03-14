@@ -20,6 +20,10 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<BookingService> BookingServices => Set<BookingService>();
     public DbSet<MasterRating> MasterRatings => Set<MasterRating>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<MasterWeeklySlot> MasterWeeklySlots => Set<MasterWeeklySlot>();
+    public DbSet<MasterDateOverride> MasterDateOverrides => Set<MasterDateOverride>();
+    public DbSet<MasterDateOverrideSlot> MasterDateOverrideSlots => Set<MasterDateOverrideSlot>();
+    public DbSet<MasterTimeOff> MasterTimeOffs => Set<MasterTimeOff>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

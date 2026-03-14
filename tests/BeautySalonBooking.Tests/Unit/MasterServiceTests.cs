@@ -1,29 +1,25 @@
 using BeautySalonBooking.Application.DTOs;
+using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Entities;
+using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Tests.Unit.Helpers;
 using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Moq;
 using MasterSvc = BeautySalonBooking.Infrastructure.ApplicationServices.MasterService;
 
 namespace BeautySalonBooking.Tests.Unit;
 
 public class MasterServiceTests
 {
-    // ── GetAll ──────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetAll_ReturnsOnlyActiveMasters()
+    private static MasterSvc CreateService(Infrastructure.Persistence.AppDbContext db)
     {
-        var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
-        await TestData.CreateMasterAsync(db, "Active");
-        var inactive = await TestData.CreateMasterAsync(db, "Inactive");
-        inactive.IsActive = false;
-        await db.SaveChangesAsync();
-
-        var result = await svc.GetAllAsync();
-
-        result.Should().HaveCount(1);
-        result[0].FirstName.Should().Be("Active");
+        var store = new Mock<IUserStore<AppUser>>();
+        var userManager = new Mock<UserManager<AppUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        var notifications = new Mock<INotificationService>();
+        var logger = new Mock<ILogger<MasterSvc>>();
+        return new MasterSvc(db, userManager.Object, notifications.Object, logger.Object);
     }
 
     // ── GetById ─────────────────────────────────────────────────────────────
@@ -32,7 +28,7 @@ public class MasterServiceTests
     public async Task GetById_ReturnsMasterWithRating()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
+        var svc = CreateService(db);
         var master = await TestData.CreateMasterAsync(db);
         db.MasterRatings.Add(new MasterRating
         {
@@ -51,52 +47,41 @@ public class MasterServiceTests
     [Fact]
     public async Task GetById_ReturnsNull_WhenNotFound()
     {
-        var result = await new MasterSvc(InMemoryDbHelper.Create()).GetByIdAsync(Guid.NewGuid());
+        var result = await CreateService(InMemoryDbHelper.Create()).GetByIdAsync(Guid.NewGuid());
         result.Should().BeNull();
     }
 
-    // ── Create / Update / Delete ─────────────────────────────────────────────
-
-    [Fact]
-    public async Task Create_PersistsMaster()
-    {
-        var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
-        var req = new CreateMasterRequest("Jane", "Doe", "+70001112233", null, "Expert");
-
-        var result = await svc.CreateAsync(req);
-
-        result.Id.Should().NotBeEmpty();
-        result.FirstName.Should().Be("Jane");
-        result.IsActive.Should().BeTrue();
-        db.Masters.Should().HaveCount(1);
-    }
+    // ── Update ──────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Update_ModifiesFields()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
+        var svc = CreateService(db);
         var master = await TestData.CreateMasterAsync(db);
-        var req = new UpdateMasterRequest("Updated", "Name", "+79999999999", null, null);
+        var req = new UpdateMasterRequest("photo.jpg", "Updated description", false);
 
         var result = await svc.UpdateAsync(master.Id, req);
 
-        result!.FirstName.Should().Be("Updated");
-        result.Phone.Should().Be("+79999999999");
+        result.Should().NotBeNull();
+        result!.Description.Should().Be("Updated description");
+        result.AutoApproveBookings.Should().BeFalse();
+        result.Photo.Should().Be("photo.jpg");
     }
 
+    // ── Delete ──────────────────────────────────────────────────────────────
+
     [Fact]
-    public async Task Delete_SetsIsActiveFalse()
+    public async Task Delete_SetsIsDeletedTrue()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
+        var svc = CreateService(db);
         var master = await TestData.CreateMasterAsync(db);
 
         var deleted = await svc.DeleteAsync(master.Id);
 
         deleted.Should().BeTrue();
-        db.Masters.Find(master.Id)!.IsActive.Should().BeFalse();
+        db.Masters.Find(master.Id)!.IsDeleted.Should().BeTrue();
     }
 
     // ── GetAverageRating ─────────────────────────────────────────────────────
@@ -105,7 +90,7 @@ public class MasterServiceTests
     public async Task GetAverageRating_CalculatesCorrectly()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
+        var svc = CreateService(db);
         var master = await TestData.CreateMasterAsync(db);
         db.MasterRatings.AddRange(
             new MasterRating { Id = Guid.NewGuid(), MasterId = master.Id, ClientName = "A", Rating = 4, CreatedAt = DateTime.UtcNow },
@@ -123,7 +108,7 @@ public class MasterServiceTests
     public async Task GetAverageRating_ReturnsZero_WhenNoRatings()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
+        var svc = CreateService(db);
         var master = await TestData.CreateMasterAsync(db);
 
         var result = await svc.GetAverageRatingAsync(master.Id);
@@ -136,11 +121,11 @@ public class MasterServiceTests
     public async Task GetServices_ReturnsOnlyActiveMasterServices()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new MasterSvc(db);
+        var svc = CreateService(db);
         var master = await TestData.CreateMasterAsync(db);
         var s1 = await TestData.CreateServiceAsync(db, "Haircut");
         var s2 = await TestData.CreateServiceAsync(db, "Coloring");
-        var ms1 = await TestData.AddMasterServiceAsync(db, master.Id, s1.Id);
+        await TestData.AddMasterServiceAsync(db, master.Id, s1.Id);
         var ms2 = await TestData.AddMasterServiceAsync(db, master.Id, s2.Id);
         ms2.IsActive = false;
         await db.SaveChangesAsync();

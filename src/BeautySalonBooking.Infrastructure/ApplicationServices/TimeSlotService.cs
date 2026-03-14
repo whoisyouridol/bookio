@@ -9,8 +9,13 @@ namespace BeautySalonBooking.Infrastructure.ApplicationServices;
 public class TimeSlotService
 {
     private readonly AppDbContext _db;
+    private readonly AvailabilityService _availability;
 
-    public TimeSlotService(AppDbContext db) => _db = db;
+    public TimeSlotService(AppDbContext db, AvailabilityService availability)
+    {
+        _db = db;
+        _availability = availability;
+    }
 
     public async Task<(List<TimeSlotDto>? slots, string? error)> GetAvailableAsync(
         Guid salonId, Guid masterId, string dateStr, List<Guid>? serviceIds)
@@ -106,32 +111,80 @@ public class TimeSlotService
         if (!DateOnly.TryParse(req.StartDate, out var startDate) || !DateOnly.TryParse(req.EndDate, out var endDate))
             return (0, "Invalid date format");
 
-        int count = 0;
-        for (var d = startDate; d <= endDate; d = d.AddDays(1))
-        {
-            if (!sm.WorkingDays.Contains(d.DayOfWeek)) continue;
+        // Check if this master has availability rules configured
+        var hasAvailabilityRules = await _db.MasterWeeklySlots.AnyAsync(w => w.SalonMasterId == sm.Id);
 
-            var current = sm.WorkingHoursStart;
-            while (current.AddMinutes(req.SlotDurationMinutes) <= sm.WorkingHoursEnd)
+        int count = 0;
+
+        if (hasAvailabilityRules)
+        {
+            // Use the availability resolution engine
+            var (resolved, resolveError) = await _availability.ResolveAsync(salonId, masterId, req.StartDate, req.EndDate);
+            if (resolveError != null) return (0, resolveError);
+
+            foreach (var day in resolved!)
             {
-                var end = current.AddMinutes(req.SlotDurationMinutes);
-                var exists = await _db.TimeSlots.AnyAsync(ts => ts.SalonMasterId == sm.Id && ts.Date == d && ts.StartTime == current);
-                if (!exists)
+                if (day.Windows.Count == 0) continue; // day off or time off
+
+                var date = DateOnly.Parse(day.Date);
+                foreach (var window in day.Windows)
                 {
-                    _db.TimeSlots.Add(new TimeSlot
+                    var windowStart = TimeOnly.Parse(window.StartTime);
+                    var windowEnd = TimeOnly.Parse(window.EndTime);
+
+                    var current = windowStart;
+                    while (current.AddMinutes(req.SlotDurationMinutes) <= windowEnd)
                     {
-                        Id = Guid.NewGuid(),
-                        SalonMasterId = sm.Id,
-                        Date = d,
-                        StartTime = current,
-                        EndTime = end,
-                        Status = TimeSlotStatus.Available,
-                    });
-                    count++;
+                        var end = current.AddMinutes(req.SlotDurationMinutes);
+                        var exists = await _db.TimeSlots.AnyAsync(ts => ts.SalonMasterId == sm.Id && ts.Date == date && ts.StartTime == current);
+                        if (!exists)
+                        {
+                            _db.TimeSlots.Add(new TimeSlot
+                            {
+                                Id = Guid.NewGuid(),
+                                SalonMasterId = sm.Id,
+                                Date = date,
+                                StartTime = current,
+                                EndTime = end,
+                                Status = TimeSlotStatus.Available,
+                            });
+                            count++;
+                        }
+                        current = end;
+                    }
                 }
-                current = end;
             }
         }
+        else
+        {
+            // Fallback: use legacy SalonMaster.WorkingHoursStart/End/WorkingDays
+            for (var d = startDate; d <= endDate; d = d.AddDays(1))
+            {
+                if (!sm.WorkingDays.Contains(d.DayOfWeek)) continue;
+
+                var current = sm.WorkingHoursStart;
+                while (current.AddMinutes(req.SlotDurationMinutes) <= sm.WorkingHoursEnd)
+                {
+                    var end = current.AddMinutes(req.SlotDurationMinutes);
+                    var exists = await _db.TimeSlots.AnyAsync(ts => ts.SalonMasterId == sm.Id && ts.Date == d && ts.StartTime == current);
+                    if (!exists)
+                    {
+                        _db.TimeSlots.Add(new TimeSlot
+                        {
+                            Id = Guid.NewGuid(),
+                            SalonMasterId = sm.Id,
+                            Date = d,
+                            StartTime = current,
+                            EndTime = end,
+                            Status = TimeSlotStatus.Available,
+                        });
+                        count++;
+                    }
+                    current = end;
+                }
+            }
+        }
+
         await _db.SaveChangesAsync();
         return (count, null);
     }

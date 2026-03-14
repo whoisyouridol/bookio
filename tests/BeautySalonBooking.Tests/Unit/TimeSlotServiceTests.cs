@@ -1,4 +1,5 @@
 using BeautySalonBooking.Application.DTOs;
+using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using BeautySalonBooking.Tests.Unit.Helpers;
@@ -8,13 +9,19 @@ namespace BeautySalonBooking.Tests.Unit;
 
 public class TimeSlotServiceTests
 {
+    private static TimeSlotService CreateService()
+    {
+        var db = InMemoryDbHelper.Create();
+        return new TimeSlotService(db, new AvailabilityService(db));
+    }
+
     // ── Generate ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Generate_CreatesCorrectNumberOfSlots()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -37,7 +44,7 @@ public class TimeSlotServiceTests
     public async Task Generate_SkipsNonWorkingDays()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -59,7 +66,7 @@ public class TimeSlotServiceTests
     public async Task Generate_SkipsDuplicateSlots()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -81,7 +88,7 @@ public class TimeSlotServiceTests
     [Fact]
     public async Task Generate_ReturnsError_WhenLinkNotFound()
     {
-        var (count, error) = await new TimeSlotService(InMemoryDbHelper.Create())
+        var (count, error) = await CreateService()
             .GenerateAsync(Guid.NewGuid(), Guid.NewGuid(),
                 new GenerateSlotsRequest("2026-03-09", "2026-03-09", 60));
 
@@ -94,7 +101,7 @@ public class TimeSlotServiceTests
     public async Task GetAvailable_ReturnsAllAvailableSlots_WhenNoServiceFilter()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -112,7 +119,7 @@ public class TimeSlotServiceTests
     public async Task GetAvailable_FiltersSlots_ByServiceDuration()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -132,7 +139,7 @@ public class TimeSlotServiceTests
     [Fact]
     public async Task GetAvailable_ReturnsError_WhenLinkNotFound()
     {
-        var (slots, error) = await new TimeSlotService(InMemoryDbHelper.Create())
+        var (slots, error) = await CreateService()
             .GetAvailableAsync(Guid.NewGuid(), Guid.NewGuid(), "2026-03-09", null);
 
         error.Should().NotBeNull();
@@ -146,7 +153,7 @@ public class TimeSlotServiceTests
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);
 
-        var (slots, error) = await new TimeSlotService(db)
+        var (slots, error) = await new TimeSlotService(db, new AvailabilityService(db))
             .GetAvailableAsync(salon.Id, master.Id, "not-a-date", null);
 
         error.Should().NotBeNull();
@@ -158,7 +165,7 @@ public class TimeSlotServiceTests
     public async Task UpdateStatus_ChangesSlotStatus()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -175,7 +182,7 @@ public class TimeSlotServiceTests
     [Fact]
     public async Task UpdateStatus_ReturnsError_WhenInvalidStatus()
     {
-        var (result, error) = await new TimeSlotService(InMemoryDbHelper.Create())
+        var (result, error) = await CreateService()
             .UpdateStatusAsync(Guid.NewGuid(), new UpdateSlotStatusRequest("Invalid"));
 
         error.Should().NotBeNull();
@@ -187,7 +194,7 @@ public class TimeSlotServiceTests
     public async Task Delete_RemovesSlot()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db);
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -198,5 +205,143 @@ public class TimeSlotServiceTests
 
         deleted.Should().BeTrue();
         db.TimeSlots.Should().BeEmpty();
+    }
+
+    // ── Generate with Availability Rules ────────────────────────────────────
+
+    [Fact]
+    public async Task Generate_UsesAvailabilityRules_WhenConfigured()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
+
+        // Configure weekly schedule: Monday 10:00-14:00 (4h = 4 x 60-min slots)
+        db.MasterWeeklySlots.Add(new MasterWeeklySlot
+        {
+            Id = Guid.NewGuid(), SalonMasterId = sm.Id,
+            DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(14, 0)
+        });
+        await db.SaveChangesAsync();
+
+        // Monday 2026-03-09
+        var monday = new DateOnly(2026, 3, 9);
+        var (count, error) = await svc.GenerateAsync(salon.Id, master.Id,
+            new GenerateSlotsRequest(monday.ToString("yyyy-MM-dd"), monday.ToString("yyyy-MM-dd"), 60));
+
+        error.Should().BeNull();
+        count.Should().Be(4); // 10-11, 11-12, 12-13, 13-14
+    }
+
+    [Fact]
+    public async Task Generate_RespectsTimeOff_WithAvailabilityRules()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
+
+        // Weekly: Monday 09-18
+        db.MasterWeeklySlots.Add(new MasterWeeklySlot
+        {
+            Id = Guid.NewGuid(), SalonMasterId = sm.Id,
+            DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(18, 0)
+        });
+        // Time off covering Monday 2026-03-09
+        db.MasterTimeOffs.Add(new MasterTimeOff
+        {
+            Id = Guid.NewGuid(), SalonMasterId = sm.Id,
+            StartDate = new DateOnly(2026, 3, 9), EndDate = new DateOnly(2026, 3, 9)
+        });
+        await db.SaveChangesAsync();
+
+        var (count, error) = await svc.GenerateAsync(salon.Id, master.Id,
+            new GenerateSlotsRequest("2026-03-09", "2026-03-09", 60));
+
+        error.Should().BeNull();
+        count.Should().Be(0); // Time off blocks all slots
+    }
+
+    [Fact]
+    public async Task Generate_RespectsDateOverride_WithAvailabilityRules()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
+
+        // Weekly: Monday 09-18 (normally 9 slots)
+        db.MasterWeeklySlots.Add(new MasterWeeklySlot
+        {
+            Id = Guid.NewGuid(), SalonMasterId = sm.Id,
+            DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(18, 0)
+        });
+        // Override: Monday 2026-03-09 only 10-12 (2 slots)
+        var ov = new MasterDateOverride
+        {
+            Id = Guid.NewGuid(), SalonMasterId = sm.Id,
+            Date = new DateOnly(2026, 3, 9), IsDayOff = false
+        };
+        ov.Slots.Add(new MasterDateOverrideSlot
+        {
+            Id = Guid.NewGuid(), DateOverrideId = ov.Id,
+            StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(12, 0)
+        });
+        db.MasterDateOverrides.Add(ov);
+        await db.SaveChangesAsync();
+
+        var (count, error) = await svc.GenerateAsync(salon.Id, master.Id,
+            new GenerateSlotsRequest("2026-03-09", "2026-03-09", 60));
+
+        error.Should().BeNull();
+        count.Should().Be(2); // Override: 10-11, 11-12
+    }
+
+    [Fact]
+    public async Task Generate_SplitShift_CreatesCorrectSlots()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
+
+        // Split shift: Monday 09-12 + 14-17 (3 + 3 = 6 x 60-min slots)
+        db.MasterWeeklySlots.AddRange(
+            new MasterWeeklySlot { Id = Guid.NewGuid(), SalonMasterId = sm.Id, DayOfWeek = DayOfWeek.Monday, StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(12, 0) },
+            new MasterWeeklySlot { Id = Guid.NewGuid(), SalonMasterId = sm.Id, DayOfWeek = DayOfWeek.Monday, StartTime = new TimeOnly(14, 0), EndTime = new TimeOnly(17, 0) }
+        );
+        await db.SaveChangesAsync();
+
+        var (count, error) = await svc.GenerateAsync(salon.Id, master.Id,
+            new GenerateSlotsRequest("2026-03-09", "2026-03-09", 60));
+
+        error.Should().BeNull();
+        count.Should().Be(6);
+    }
+
+    [Fact]
+    public async Task Generate_FallsBackToLegacy_WhenNoAvailabilityRules()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+        await TestData.LinkMasterAsync(db, salon.Id, master.Id);
+        // No weekly slots configured → falls back to SalonMaster.WorkingHoursStart/End (09-18)
+
+        var monday = new DateOnly(2026, 3, 9);
+        var (count, error) = await svc.GenerateAsync(salon.Id, master.Id,
+            new GenerateSlotsRequest(monday.ToString("yyyy-MM-dd"), monday.ToString("yyyy-MM-dd"), 60));
+
+        error.Should().BeNull();
+        count.Should().Be(9); // legacy: 09-18 = 9 x 60-min slots
     }
 }

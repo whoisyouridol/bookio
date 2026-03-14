@@ -2,11 +2,11 @@ import type { TimeSlotDto } from '@/types';
 
 interface TimeSlotGridProps {
   slots: TimeSlotDto[];
-  selectedId: string | null;
+  selectedStartTime: string | null;
   onSelect: (slot: TimeSlotDto) => void;
 }
 
-export function TimeSlotGrid({ slots, selectedId, onSelect }: TimeSlotGridProps) {
+export function TimeSlotGrid({ slots, selectedStartTime, onSelect }: TimeSlotGridProps) {
   if (slots.length === 0) {
     return (
       <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
@@ -19,10 +19,10 @@ export function TimeSlotGrid({ slots, selectedId, onSelect }: TimeSlotGridProps)
     <div className="grid grid-cols-4 gap-2">
       {slots.map(slot => {
         const available = slot.status === 'Available';
-        const selected = selectedId === slot.id;
+        const selected = selectedStartTime === slot.startTime;
         return (
           <button
-            key={slot.id}
+            key={`${slot.date}-${slot.startTime}`}
             type="button"
             disabled={!available}
             onClick={() => available && onSelect(slot)}

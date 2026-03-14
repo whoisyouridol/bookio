@@ -75,6 +75,23 @@ public class SalonMasterService
         return true;
     }
 
+    public async Task<List<SalonMasterWithSalonDto>> GetByMasterAsync(Guid masterId)
+    {
+        var links = await _db.SalonMasters
+            .Include(sm => sm.Salon)
+            .Where(sm => sm.MasterId == masterId && sm.IsActive)
+            .OrderBy(sm => sm.Salon.Name)
+            .ToListAsync();
+
+        return links.Select(sm => new SalonMasterWithSalonDto(
+            sm.Id, sm.SalonId, sm.MasterId, sm.Salon.Name,
+            sm.WorkingHoursStart.ToString("HH:mm"),
+            sm.WorkingHoursEnd.ToString("HH:mm"),
+            sm.WorkingDays.Select(d => d.ToString()).ToList(),
+            sm.IsActive
+        )).ToList();
+    }
+
     private async Task<AppUser?> GetMasterUserAsync(Guid masterId) =>
         await _db.Set<AppUser>().FirstOrDefaultAsync(u => u.MasterId == masterId);
 

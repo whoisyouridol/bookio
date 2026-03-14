@@ -31,6 +31,7 @@ import BookingsAdminPage from '@/pages/admin/BookingsAdminPage';
 import BookingDetailAdminPage from '@/pages/admin/BookingDetailAdminPage';
 import UsersPage from '@/pages/admin/UsersPage';
 import UserDetailPage from '@/pages/admin/UserDetailPage';
+import AvailabilityPage from '@/pages/admin/AvailabilityPage';
 import NotFoundPage from '@/pages/client/NotFoundPage';
 
 const router = createBrowserRouter([
@@ -115,6 +116,7 @@ const router = createBrowserRouter([
       { path: 'masters/new', element: <MasterFormPage /> },
       { path: 'masters/:masterId', element: <MasterFormPage /> },
 
+      { path: 'availability', element: <AvailabilityPage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'bookings', element: <BookingsAdminPage /> },
       { path: 'bookings/:bookingId', element: <BookingDetailAdminPage /> },

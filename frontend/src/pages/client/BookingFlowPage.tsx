@@ -131,7 +131,7 @@ export default function BookingFlowPage() {
               ) : (
                 <TimeSlotGrid
                   slots={slots ?? []}
-                  selectedId={selectedSlot?.id ?? null}
+                  selectedStartTime={selectedSlot?.startTime ?? null}
                   onSelect={setSelectedSlot}
                 />
               )}

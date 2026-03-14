@@ -88,6 +88,17 @@ export interface SalonMasterDto {
   isActive: boolean;
 }
 
+export interface SalonMasterWithSalonDto {
+  id: string;
+  salonId: string;
+  masterId: string;
+  salonName: string;
+  workingHoursStart: string;
+  workingHoursEnd: string;
+  workingDays: string[];
+  isActive: boolean;
+}
+
 export interface LinkMasterToSalonRequest {
   masterId: string;
   workingHoursStart: string;
@@ -310,4 +321,80 @@ export interface SalonTheme {
   border: string;
   fontFamily: string;
   borderRadius: string;
+}
+
+// ── Availability ─────────────────────────────────────────────────────────────
+
+export interface WeeklySlotDto {
+  id: string;
+  salonMasterId: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface SetWeeklyScheduleRequest {
+  slots: WeeklySlotItemRequest[];
+}
+
+export interface WeeklySlotItemRequest {
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface DateOverrideDto {
+  id: string;
+  salonMasterId: string;
+  date: string;
+  isDayOff: boolean;
+  slots: DateOverrideSlotDto[];
+}
+
+export interface DateOverrideSlotDto {
+  id: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface UpsertDateOverrideRequest {
+  date: string;
+  isDayOff: boolean;
+  slots?: DateOverrideSlotItemRequest[];
+}
+
+export interface DateOverrideSlotItemRequest {
+  startTime: string;
+  endTime: string;
+}
+
+export interface TimeOffDto {
+  id: string;
+  salonMasterId: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export interface CreateTimeOffRequest {
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export interface UpdateTimeOffRequest {
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export interface ResolvedDayAvailability {
+  date: string;
+  source: 'weekly' | 'override' | 'off' | 'timeoff';
+  windows: TimeWindow[];
+}
+
+export interface TimeWindow {
+  startTime: string;
+  endTime: string;
 }

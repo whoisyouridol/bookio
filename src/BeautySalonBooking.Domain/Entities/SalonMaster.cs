@@ -13,4 +13,7 @@ public class SalonMaster
     public Salon Salon { get; set; } = null!;
     public Master Master { get; set; } = null!;
     public ICollection<TimeSlot> TimeSlots { get; set; } = new List<TimeSlot>();
+    public ICollection<MasterWeeklySlot> WeeklySlots { get; set; } = new List<MasterWeeklySlot>();
+    public ICollection<MasterDateOverride> DateOverrides { get; set; } = new List<MasterDateOverride>();
+    public ICollection<MasterTimeOff> TimeOffs { get; set; } = new List<MasterTimeOff>();
 }

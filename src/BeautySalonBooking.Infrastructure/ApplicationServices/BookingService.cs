@@ -5,17 +5,20 @@ using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+// TimeSlotStatus import kept for potential legacy compatibility
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
 
 public class BookingService
 {
     private readonly AppDbContext _db;
+    private readonly AvailabilityService _availability;
     private readonly INotificationService _notifications;
 
-    public BookingService(AppDbContext db, INotificationService notifications)
+    public BookingService(AppDbContext db, AvailabilityService availability, INotificationService notifications)
     {
         _db = db;
+        _availability = availability;
         _notifications = notifications;
     }
 
@@ -92,33 +95,11 @@ public class BookingService
         decimal totalPrice = masterServices.Sum(ms => ms.Price);
         var endTime = startTime.AddMinutes(totalDuration);
 
-        var candidateSlots = await _db.TimeSlots
-            .Where(ts => ts.SalonMasterId == sm.Id && ts.Date == date &&
-                         ts.StartTime >= startTime &&
-                         ts.Status == TimeSlotStatus.Available)
-            .OrderBy(ts => ts.StartTime)
-            .ToListAsync();
-
-        if (candidateSlots.Count == 0 || candidateSlots[0].StartTime != startTime)
-            return (null, "Not enough available time slots for the requested duration");
-
-        var requiredSlots = new List<Domain.Entities.TimeSlot>();
-        var coveredMinutes = 0;
-        TimeOnly? prev = null;
-        foreach (var slot in candidateSlots)
-        {
-            if (prev.HasValue && slot.StartTime != prev.Value) break;
-            requiredSlots.Add(slot);
-            coveredMinutes += (int)(slot.EndTime - slot.StartTime).TotalMinutes;
-            prev = slot.EndTime;
-            if (coveredMinutes >= totalDuration) break;
-        }
-
-        if (coveredMinutes < totalDuration)
-            return (null, "Not enough available time slots for the requested duration");
-
-        foreach (var slot in requiredSlots)
-            slot.Status = TimeSlotStatus.Booked;
+        // Validate availability using on-the-fly engine (no pre-generated slots needed)
+        var (available, availError) = await _availability.ValidateBookingSlotAsync(
+            req.SalonId, req.MasterId, date, startTime, endTime);
+        if (!available)
+            return (null, availError ?? "The requested time slot is not available");
 
         var booking = new Booking
         {
@@ -221,20 +202,8 @@ public class BookingService
         booking.CancellationReason = req.Reason;
         booking.UpdatedAt = DateTime.UtcNow;
 
-        // Release slots
-        var sm = await _db.SalonMasters.FirstOrDefaultAsync(x => x.SalonId == booking.SalonId && x.MasterId == booking.MasterId);
-        if (sm != null)
-        {
-            var slots = await _db.TimeSlots
-                .Where(ts => ts.SalonMasterId == sm.Id && ts.Date == booking.BookingDate &&
-                             ts.StartTime >= booking.StartTime && ts.EndTime <= booking.EndTime &&
-                             ts.Status == TimeSlotStatus.Booked)
-                .ToListAsync();
-
-            foreach (var slot in slots)
-                slot.Status = TimeSlotStatus.Available;
-        }
-
+        // No need to release TimeSlot records — availability is computed on-the-fly
+        // from bookings. Cancelling the booking automatically frees the time.
         await _db.SaveChangesAsync();
         await _notifications.SendBookingCancelledAsync(booking.Id, side);
 

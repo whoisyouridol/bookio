@@ -94,6 +94,7 @@ public static class DependencyInjection
         services.AddScoped<CatalogService>();
         services.AddScoped<MasterServiceManager>();
         services.AddScoped<TimeSlotService>();
+        services.AddScoped<AvailabilityService>();
         services.AddScoped<BookingService>();
         services.AddScoped<RatingService>();
 

@@ -28,12 +28,12 @@ public static class TestData
         return salon;
     }
 
-    public static async Task<Master> CreateMasterAsync(AppDbContext db, string firstName = "Test", string lastName = "Master", bool autoApproveBookings = true)
+    public static async Task<Master> CreateMasterAsync(AppDbContext db, string description = "Test Master", bool autoApproveBookings = true)
     {
         var master = new Master
         {
-            Id = Guid.NewGuid(), FirstName = firstName, LastName = lastName,
-            Phone = "+70001112233", AutoApproveBookings = autoApproveBookings,
+            Id = Guid.NewGuid(), Description = description,
+            AutoApproveBookings = autoApproveBookings,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         };
         db.Masters.Add(master);

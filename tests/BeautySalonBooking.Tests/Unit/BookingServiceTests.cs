@@ -2,6 +2,7 @@ using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
+using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Tests.Unit.Helpers;
 using FluentAssertions;
 using Moq;
@@ -12,10 +13,15 @@ public class BookingServiceTests
 {
     private readonly Mock<INotificationService> _notifMock = new();
 
-    private BookingService BuildService(InMemoryDbHelper.Ctx ctx) =>
-        new(ctx.Db, _notifMock.Object);
+    private BookingService BuildService(AppDbContext db)
+    {
+        var availability = new AvailabilityService(db);
+        return new BookingService(db, availability, _notifMock.Object);
+    }
 
-    // Helper — sets up a full bookable scenario with auto-approve ON (default)
+    private BookingService BuildService(InMemoryDbHelper.Ctx ctx) => BuildService(ctx.Db);
+
+    // Helper — sets up a full bookable scenario using SalonMaster working hours (legacy fallback)
     private async Task<(
         InMemoryDbHelper.Ctx ctx,
         BookingService svc,
@@ -33,9 +39,10 @@ public class BookingServiceTests
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, price: 1500, duration: 60);
 
+        // 2026-03-09 is a Monday — within SalonMaster.WorkingDays
+        // SalonMaster has WorkingHoursStart=09:00, WorkingHoursEnd=18:00
         var date = new DateOnly(2026, 3, 9);
         var start = new TimeOnly(10, 0);
-        await TestData.CreateSlotsAsync(ctx.Db, sm.Id, date, start, start.AddMinutes(120), 60);
 
         return (ctx, svc, salon.Id, master.Id, service.Id, sm.Id, date, start);
     }
@@ -107,37 +114,20 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public async Task Create_MarksSlotAsBooked()
-    {
-        var (ctx, svc, salonId, masterId, serviceId, smId, date, start) =
-            await SetupBookableScenarioAsync();
-
-        var req = new CreateBookingRequest(salonId, masterId, "Bob", "+79990000000", null,
-            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
-
-        await svc.CreateAsync(req);
-
-        ctx.Db.TimeSlots
-            .Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime == start)
-            .First().Status.Should().Be(TimeSlotStatus.Booked);
-    }
-
-    [Fact]
     public async Task Create_SumsMultipleServices()
     {
         var ctx = InMemoryDbHelper.CreateCtx();
         var svc = BuildService(ctx);
         var salon = await TestData.CreateSalonAsync(ctx.Db);
         var master = await TestData.CreateMasterAsync(ctx.Db);
-        var sm = await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id);
+        await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id);
         var s1 = await TestData.CreateServiceAsync(ctx.Db, "A");
         var s2 = await TestData.CreateServiceAsync(ctx.Db, "B");
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s1.Id, price: 1000, duration: 60);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s2.Id, price: 2000, duration: 60);
 
-        var date = new DateOnly(2026, 3, 9);
+        var date = new DateOnly(2026, 3, 9); // Monday
         var start = new TimeOnly(9, 0);
-        await TestData.CreateSlotsAsync(ctx.Db, sm.Id, date, start, start.AddMinutes(180), 60);
 
         var req = new CreateBookingRequest(salon.Id, master.Id, "Dan", "+70000000002", null,
             date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [s1.Id, s2.Id]);
@@ -153,7 +143,7 @@ public class BookingServiceTests
     public async Task Create_Fails_WhenMasterNotLinkedToSalon()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var service = await TestData.CreateServiceAsync(db);
@@ -169,21 +159,19 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public async Task Create_Fails_WhenInsufficientSlots()
+    public async Task Create_Fails_WhenOutsideWorkingHours()
     {
         var ctx = InMemoryDbHelper.CreateCtx();
         var svc = BuildService(ctx);
         var salon = await TestData.CreateSalonAsync(ctx.Db);
         var master = await TestData.CreateMasterAsync(ctx.Db);
-        var sm = await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id);
+        await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id); // 09:00-18:00
         var service = await TestData.CreateServiceAsync(ctx.Db);
-        await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, duration: 120);
+        await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, duration: 60);
 
-        await TestData.CreateSlotsAsync(ctx.Db, sm.Id, new DateOnly(2026, 3, 9),
-            new TimeOnly(10, 0), new TimeOnly(11, 0), 60);
-
+        // 20:00 is outside working hours (09:00-18:00)
         var req = new CreateBookingRequest(salon.Id, master.Id, "Frank", "+70000000004", null,
-            "2026-03-09", "10:00", [service.Id]);
+            "2026-03-09", "20:00", [service.Id]);
 
         var (result, error) = await svc.CreateAsync(req);
 
@@ -194,7 +182,7 @@ public class BookingServiceTests
     public async Task Create_Fails_WhenSalonNotFound()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var req = new CreateBookingRequest(Guid.NewGuid(), Guid.NewGuid(), "G", "+1", null,
             "2026-03-09", "10:00", [Guid.NewGuid()]);
 
@@ -209,7 +197,7 @@ public class BookingServiceTests
     public async Task Confirm_ChangesStatusToConfirmed()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);
@@ -224,7 +212,7 @@ public class BookingServiceTests
     public async Task Confirm_NotifiesClientConfirmed()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);
@@ -238,7 +226,7 @@ public class BookingServiceTests
     public async Task Confirm_Fails_WhenAlreadyConfirmed()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Confirmed);
@@ -251,7 +239,7 @@ public class BookingServiceTests
     [Fact]
     public async Task Confirm_ReturnsNull_WhenNotFound()
     {
-        var (result, error) = await new BookingService(InMemoryDbHelper.Create(), _notifMock.Object)
+        var (result, error) = await BuildService(InMemoryDbHelper.Create())
             .ConfirmAsync(Guid.NewGuid());
         result.Should().BeNull();
     }
@@ -262,7 +250,7 @@ public class BookingServiceTests
     public async Task Complete_Succeeds_WhenConfirmedAndTimePassed()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2));
@@ -280,7 +268,7 @@ public class BookingServiceTests
     public async Task Complete_NotifiesClientCompleted()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var pastDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2));
@@ -296,7 +284,7 @@ public class BookingServiceTests
     public async Task Complete_Fails_WhenNotConfirmed()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);
@@ -310,7 +298,7 @@ public class BookingServiceTests
     public async Task Complete_Fails_WhenBookingTimeNotYetPassed()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var futureDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1));
@@ -328,7 +316,7 @@ public class BookingServiceTests
     public async Task Cancel_ByClient_SetsCorrectStatus()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Confirmed);
@@ -345,7 +333,7 @@ public class BookingServiceTests
     public async Task Cancel_ByMaster_SetsCorrectStatus()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);
@@ -360,7 +348,7 @@ public class BookingServiceTests
     public async Task Cancel_NotifiesBothParties()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);
@@ -371,27 +359,10 @@ public class BookingServiceTests
     }
 
     [Fact]
-    public async Task Cancel_ReleasesBookedSlots()
-    {
-        var (ctx, svc, salonId, masterId, serviceId, smId, date, start) =
-            await SetupBookableScenarioAsync();
-
-        var req = new CreateBookingRequest(salonId, masterId, "Harry", "+70000000005", null,
-            date.ToString("yyyy-MM-dd"), start.ToString("HH:mm"), [serviceId]);
-        var (booking, _) = await svc.CreateAsync(req);
-
-        await svc.CancelAsync(booking!.Id, new CancelBookingRequest("Client", null));
-
-        ctx.Db.TimeSlots
-            .Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime == start)
-            .First().Status.Should().Be(TimeSlotStatus.Available);
-    }
-
-    [Fact]
     public async Task Cancel_Fails_WhenAlreadyCompleted()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var booking = await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Completed);
@@ -407,7 +378,7 @@ public class BookingServiceTests
     public async Task GetAll_FiltersBySalon()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon1 = await TestData.CreateSalonAsync(db, "S1");
         var salon2 = await TestData.CreateSalonAsync(db, "S2");
         var master = await TestData.CreateMasterAsync(db);
@@ -424,7 +395,7 @@ public class BookingServiceTests
     public async Task GetAll_FiltersByStatus()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new BookingService(db, _notifMock.Object);
+        var svc = BuildService(db);
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         await TestData.CreateBookingAsync(db, salon.Id, master.Id, BookingStatus.Pending);

@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
-import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Scissors, Calendar, UserCircle, LogOut, ShieldCheck, CalendarClock } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth, type Role } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ const allNav: { to: string; label: string; icon: React.ElementType; exact?: bool
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['superadmin'] },
   { to: '/admin/salons', label: 'Salons', icon: Building2, roles: ['superadmin'] },
   { to: '/admin/masters', label: 'Masters', icon: Users, roles: ['master_admin'] },
+  { to: '/admin/availability', label: 'Availability', icon: CalendarClock, roles: ['master_admin'] },
   { to: '/admin/services', label: 'Services', icon: Scissors, roles: ['superadmin', 'salon_admin'] },
   { to: '/admin/bookings', label: 'Bookings', icon: Calendar, roles: ['superadmin', 'salon_admin', 'master_admin'] },
   { to: '/admin/users', label: 'Accounts', icon: ShieldCheck, roles: ['superadmin'] },

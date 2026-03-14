@@ -50,6 +50,10 @@ export default function BookingsAdminPage() {
   // Client-side access filter on top of API results
   const visibleBookings = bookings?.filter(b => canAccessBooking(b)) ?? [];
 
+  const isMaster = role === 'master_admin';
+  const showMasterCol = !isMaster;
+  const showSalonCol = !isMaster || new Set(visibleBookings.map(b => b.salonId)).size > 1;
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Bookings</h1>
@@ -92,7 +96,7 @@ export default function BookingsAdminPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['Date & Time', 'Client', 'Salon', 'Master', 'Services', 'Total', 'Status', ''].map(h => (
+                  {['Date & Time', 'Client', ...(showSalonCol ? ['Salon'] : []), ...(showMasterCol ? ['Master'] : []), 'Services', 'Total', 'Status', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -108,8 +112,8 @@ export default function BookingsAdminPage() {
                       <p className="font-medium">{b.clientName}</p>
                       <p className="text-gray-400 text-xs">{b.clientPhone}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{b.salonName}</td>
-                    <td className="px-4 py-3 text-gray-700">{b.masterName}</td>
+                    {showSalonCol && <td className="px-4 py-3 text-gray-700">{b.salonName}</td>}
+                    {showMasterCol && <td className="px-4 py-3 text-gray-700">{b.masterName}</td>}
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-32 truncate">
                       {b.services.map(s => s.serviceName).join(', ')}
                     </td>
