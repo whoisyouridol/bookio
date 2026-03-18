@@ -41,6 +41,11 @@ export default function SalonFormPage() {
   const [workingDays, setWorkingDays] = useState<string[]>(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
   const [photos, setPhotos] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
+  const [slug, setSlug] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('');
+  const [accentColor, setAccentColor] = useState('');
+  const [borderRadius, setBorderRadius] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
 
   useEffect(() => {
     if (existing) {
@@ -53,6 +58,11 @@ export default function SalonFormPage() {
       setWorkingDays(existing.workingDays);
       setPhotos(existing.photos);
       setVideos(existing.videos);
+      setSlug(existing.slug ?? '');
+      setPrimaryColor(existing.primaryColor ?? '');
+      setAccentColor(existing.accentColor ?? '');
+      setBorderRadius(existing.borderRadius ?? '');
+      setLogoUrl(existing.logoUrl ?? '');
     }
   }, [existing]);
 
@@ -60,6 +70,7 @@ export default function SalonFormPage() {
     mutationFn: () => {
       const payload = {
         name, address,
+        slug: slug || undefined,
         googleMapsUrl: googleMapsUrl || undefined,
         yandexMapsUrl: yandexMapsUrl || undefined,
         workingHoursStart: hoursStart,
@@ -67,6 +78,10 @@ export default function SalonFormPage() {
         workingDays,
         photos: photos.filter(Boolean),
         videos: videos.filter(Boolean),
+        primaryColor: primaryColor || undefined,
+        accentColor: accentColor || undefined,
+        borderRadius: borderRadius || undefined,
+        logoUrl: logoUrl || undefined,
       };
       return isNew ? createSalon(payload) : updateSalon(salonId!, payload);
     },
@@ -89,6 +104,7 @@ export default function SalonFormPage() {
 
       <form onSubmit={e => { e.preventDefault(); mutation.mutate(); }} className="space-y-5">
         <FormField label="Name *" value={name} onChange={setName} required />
+        <FormField label="Slug" value={slug} onChange={setSlug} placeholder="my-salon (auto-generated if empty)" />
         <FormField label="Address *" value={address} onChange={setAddress} required />
         <FormField label="Google Maps URL" value={googleMapsUrl} onChange={setGoogleMapsUrl} />
         <FormField label="Yandex Maps URL" value={yandexMapsUrl} onChange={setYandexMapsUrl} />
@@ -115,6 +131,31 @@ export default function SalonFormPage() {
                 {day.slice(0, 3)}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Subdomain Theming */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Subdomain Theming</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Primary Color</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={primaryColor || '#8B5CF6'} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border border-gray-200" />
+                <input type="text" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} placeholder="#8B5CF6" className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-lg" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Accent Color</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={accentColor || '#7C3AED'} onChange={e => setAccentColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border border-gray-200" />
+                <input type="text" value={accentColor} onChange={e => setAccentColor(e.target.value)} placeholder="#7C3AED" className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-lg" />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <FormField label="Border Radius" value={borderRadius} onChange={setBorderRadius} placeholder="12px" />
+            <FormField label="Logo URL" value={logoUrl} onChange={setLogoUrl} placeholder="https://..." />
           </div>
         </div>
 

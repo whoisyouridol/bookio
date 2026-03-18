@@ -1,8 +1,12 @@
+using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BeautySalonBooking.API.Controllers;
 
@@ -14,10 +18,21 @@ public class AuthController : ControllerBase
     private readonly bool _isProduction;
     private const string RefreshCookieName = "refreshToken";
 
-    public AuthController(AuthService auth, IWebHostEnvironment env)
+    private readonly string[] _mainDomains;
+    private readonly IMemoryCache _cache;
+    private readonly IHttpClientFactory _http;
+    private readonly IConfiguration _config;
+
+    public AuthController(AuthService auth, IWebHostEnvironment env, IConfiguration config,
+        IMemoryCache cache, IHttpClientFactory http)
     {
         _auth = auth;
         _isProduction = env.IsProduction();
+        _mainDomains = config.GetSection("Subdomain:MainDomains").Get<string[]>()
+            ?? ["localhost"];
+        _cache = cache;
+        _http = http;
+        _config = config;
     }
 
     /// <summary>Register a new client account with email and password</summary>
@@ -153,18 +168,111 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    // ── Google OAuth Code Flow (for subdomain login) ──────────────────────────
+
+    /// <summary>Start Google OAuth code flow. Redirects browser to Google account picker.</summary>
+    [HttpGet("google/start")]
+    public IActionResult GoogleStart([FromQuery] string? returnTo)
+    {
+        var clientId = _config["OAuth:Google:ClientId"];
+        var callbackUrl = _config["OAuth:Google:CallbackUrl"];
+        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(callbackUrl))
+            return BadRequest(new { error = "Google OAuth is not configured" });
+
+        // Validate returnTo is a trusted subdomain to prevent open redirect
+        var safeReturnTo = SanitizeReturnTo(returnTo);
+
+        var state = Guid.NewGuid().ToString("N");
+        _cache.Set($"google_state:{state}", safeReturnTo, TimeSpan.FromMinutes(10));
+
+        var query = new Dictionary<string, string>
+        {
+            ["client_id"]     = clientId,
+            ["redirect_uri"]  = callbackUrl,
+            ["response_type"] = "code",
+            ["scope"]         = "openid email profile",
+            ["state"]         = state,
+            ["prompt"]        = "select_account",
+        };
+        var url = "https://accounts.google.com/o/oauth2/v2/auth?" +
+                  string.Join("&", query.Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+
+        return Redirect(url);
+    }
+
+    /// <summary>Google OAuth callback — exchanges code for tokens, sets session cookie, redirects back.</summary>
+    [HttpGet("google/callback")]
+    public async Task<IActionResult> GoogleCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error)
+    {
+        if (!string.IsNullOrEmpty(error))
+            return RedirectWithError("google_cancelled");
+
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+            return RedirectWithError("invalid_request");
+
+        if (!_cache.TryGetValue($"google_state:{state}", out string? returnTo))
+            return RedirectWithError("state_mismatch");
+        _cache.Remove($"google_state:{state}");
+
+        var clientId     = _config["OAuth:Google:ClientId"]!;
+        var clientSecret = _config["OAuth:Google:ClientSecret"]!;
+        var callbackUrl  = _config["OAuth:Google:CallbackUrl"]!;
+
+        // Exchange authorization code for tokens
+        var http = _http.CreateClient();
+        var tokenResp = await http.PostAsync("https://oauth2.googleapis.com/token",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["code"]          = code,
+                ["client_id"]     = clientId,
+                ["client_secret"] = clientSecret,
+                ["redirect_uri"]  = callbackUrl,
+                ["grant_type"]    = "authorization_code",
+            }));
+
+        if (!tokenResp.IsSuccessStatusCode)
+            return Redirect($"{returnTo}?auth_error=google_token_exchange_failed");
+
+        var tokenJson = await tokenResp.Content.ReadFromJsonAsync<GoogleTokenResponse>();
+        if (string.IsNullOrEmpty(tokenJson?.IdToken))
+            return Redirect($"{returnTo}?auth_error=missing_id_token");
+
+        // Reuse existing auth service — validates id_token and finds/creates user
+        var (result, rawRefresh, authError) = await _auth.LoginWithGoogleAsync(new GoogleAuthRequest(tokenJson.IdToken));
+        if (authError != null)
+            return Redirect($"{returnTo}?auth_error={Uri.EscapeDataString(authError)}");
+
+        SetRefreshCookie(rawRefresh!);
+        return Redirect(returnTo!);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void SetRefreshCookie(string rawRefreshToken)
     {
-        Response.Cookies.Append(RefreshCookieName, rawRefreshToken, new CookieOptions
+        var opts = new CookieOptions
         {
             HttpOnly = true,
             Secure = _isProduction,
             SameSite = SameSiteMode.Lax,
             Path = "/api/auth/refresh",
             Expires = DateTimeOffset.UtcNow.AddDays(7),
-        });
+        };
+
+        // Derive cookie domain from request host so it works across subdomains
+        // e.g. request from glow.bookvisit.com → cookie domain = .bookvisit.com
+        var requestHost = Request.Host.Host;
+        foreach (var domain in _mainDomains)
+        {
+            if (requestHost.Equals(domain, StringComparison.OrdinalIgnoreCase)
+                || requestHost.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase))
+            {
+                opts.Domain = "." + domain;
+                break;
+            }
+        }
+
+        Response.Cookies.Append(RefreshCookieName, rawRefreshToken, opts);
     }
 
     private Guid? GetUserId()
@@ -172,5 +280,35 @@ public class AuthController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
                ?? User.FindFirstValue("sub");
         return Guid.TryParse(sub, out var id) ? id : null;
+    }
+
+    private string SanitizeReturnTo(string? returnTo)
+    {
+        if (string.IsNullOrWhiteSpace(returnTo)) return "/";
+        try
+        {
+            var uri = new Uri(returnTo);
+            var host = uri.Host.ToLowerInvariant();
+            foreach (var domain in _mainDomains)
+            {
+                if (host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
+                    host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase))
+                    return returnTo;
+            }
+        }
+        catch { }
+        return "/";
+    }
+
+    private IActionResult RedirectWithError(string errorCode)
+    {
+        // Redirect to main domain login with error — we don't know returnTo at this point
+        return Redirect($"/?auth_error={errorCode}");
+    }
+
+    private sealed class GoogleTokenResponse
+    {
+        [JsonPropertyName("id_token")]    public string? IdToken { get; set; }
+        [JsonPropertyName("access_token")] public string? AccessToken { get; set; }
     }
 }

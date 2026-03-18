@@ -19,7 +19,7 @@ public class TimeSlotsControllerTests : IntegrationTestBase
             workingDays = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" }
         });
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { firstName = "Slot", lastName = "Tester", phone = "+70001119999" });
+            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Slot", lastName = "Tester", phone = "+70001119999" });
         var salonId = salon.GetProperty("id").GetString()!;
         var masterId = master.GetProperty("id").GetString()!;
 
@@ -114,10 +114,13 @@ public class TimeSlotsControllerTests : IntegrationTestBase
     public async Task UpdateStatus_Returns200_WithNewStatus()
     {
         var (salonId, masterId) = await SetupSalonMasterAsync();
-        await PostAsync<JsonElement>($"/api/salons/{salonId}/masters/{masterId}/slots/generate",
-            new { startDate = "2026-04-21", endDate = "2026-04-21", slotDurationMinutes = 60 });
-        var slots = await GetAsync<List<JsonElement>>(
-            $"/api/salons/{salonId}/masters/{masterId}/slots?date=2026-04-21");
+        // Use CreateBatch to get real DB slot IDs (GetAvailable returns computed virtual slots)
+        var (slots, _) = await PostAsync<List<JsonElement>>(
+            $"/api/salons/{salonId}/masters/{masterId}/slots", new
+            {
+                date = "2026-04-21",
+                slots = new[] { new { startTime = "09:00", endTime = "10:00" } }
+            });
         var slotId = slots![0].GetProperty("id").GetString();
 
         var (updated, status) = await PutAsync<JsonElement>($"/api/slots/{slotId}",
@@ -133,10 +136,13 @@ public class TimeSlotsControllerTests : IntegrationTestBase
     public async Task Delete_Returns204()
     {
         var (salonId, masterId) = await SetupSalonMasterAsync();
-        await PostAsync<JsonElement>($"/api/salons/{salonId}/masters/{masterId}/slots/generate",
-            new { startDate = "2026-04-22", endDate = "2026-04-22", slotDurationMinutes = 60 });
-        var slots = await GetAsync<List<JsonElement>>(
-            $"/api/salons/{salonId}/masters/{masterId}/slots?date=2026-04-22");
+        // Use CreateBatch to get real DB slot IDs
+        var (slots, _) = await PostAsync<List<JsonElement>>(
+            $"/api/salons/{salonId}/masters/{masterId}/slots", new
+            {
+                date = "2026-04-22",
+                slots = new[] { new { startTime = "09:00", endTime = "10:00" } }
+            });
         var slotId = slots![0].GetProperty("id").GetString();
 
         var status = await DeleteAsync($"/api/slots/{slotId}");

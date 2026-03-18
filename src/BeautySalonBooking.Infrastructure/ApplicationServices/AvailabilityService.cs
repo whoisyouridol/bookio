@@ -4,6 +4,7 @@ using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Domain.Services;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using static BeautySalonBooking.Domain.Services.AvailabilityEngine;
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
@@ -11,8 +12,15 @@ namespace BeautySalonBooking.Infrastructure.ApplicationServices;
 public class AvailabilityService
 {
     private readonly AppDbContext _db;
+    private readonly int _tzOffsetHours;
 
-    public AvailabilityService(AppDbContext db) => _db = db;
+    public AvailabilityService(AppDbContext db, IConfiguration config)
+    {
+        _db = db;
+        _tzOffsetHours = config.GetValue<int>("Booking:TimezoneOffsetHours", 0);
+    }
+
+    private DateTime LocalNow => DateTime.UtcNow.AddHours(_tzOffsetHours);
 
     // ── On-the-fly slot computation ──────────────────────────────────────────
 
@@ -52,6 +60,14 @@ public class AvailabilityService
         var slots = serviceDuration > 0
             ? ComputeBookableSlots(dayInput, slotMinutes, serviceDuration)
             : ComputeAvailableSlots(dayInput, slotMinutes);
+
+        // Filter out slots that have already passed (using business local time)
+        var localNow = LocalNow;
+        if (date == DateOnly.FromDateTime(localNow))
+        {
+            var nowTime = TimeOnly.FromDateTime(localNow);
+            slots = slots.Where(s => s.Start > nowTime).ToList();
+        }
 
         var dtos = slots.Select(s => new TimeSlotDto(
             Guid.Empty, // no persisted ID

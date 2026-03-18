@@ -57,10 +57,25 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+var mainDomains = builder.Configuration.GetSection("Subdomain:MainDomains").Get<string[]>()
+    ?? ["localhost"];
+
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.AllowAnyOrigin()
-     .AllowAnyHeader()
-     .AllowAnyMethod()));
+    p.SetIsOriginAllowed(origin =>
+    {
+        var host = new Uri(origin).Host;
+        foreach (var domain in mainDomains)
+        {
+            if (string.Equals(host, domain, StringComparison.OrdinalIgnoreCase)) return true;
+            if (host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    })
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials()));
+
+builder.Services.AddMemoryCache();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -101,6 +116,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseMiddleware<SubdomainMiddleware>();
 app.UseCors();
 
 app.UseSwagger();

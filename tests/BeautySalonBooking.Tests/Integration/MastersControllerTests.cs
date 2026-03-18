@@ -11,7 +11,7 @@ public class MastersControllerTests : IntegrationTestBase
 
     private static object ValidMasterBody(string first = "Jane", string last = "Doe") => new
     {
-        firstName = first, lastName = last, phone = "+70001112233"
+        email = $"test-{Guid.NewGuid():N}@test.com", firstName = first, lastName = last, phone = "+70001112233"
     };
 
     // ── GET /api/masters ──────────────────────────────────────────────────────
@@ -32,13 +32,13 @@ public class MastersControllerTests : IntegrationTestBase
 
         status.Should().Be(HttpStatusCode.Created);
         body.GetProperty("firstName").GetString().Should().Be("Anna");
-        body.GetProperty("isActive").GetBoolean().Should().BeTrue();
+        body.GetProperty("isDeleted").GetBoolean().Should().BeFalse();
     }
 
     [Fact]
     public async Task Create_Returns400_WhenPhoneMissing()
     {
-        var response = await Client.PostAsJsonAsync("/api/masters", new { firstName = "X", lastName = "Y" });
+        var response = await Client.PostAsJsonAsync("/api/masters", new { email = "nophone@test.com", firstName = "X", lastName = "Y" });
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -74,11 +74,11 @@ public class MastersControllerTests : IntegrationTestBase
 
         var (updated, status) = await PutAsync<JsonElement>($"/api/masters/{id}", new
         {
-            firstName = "New", lastName = "Name", phone = "+70009999999"
+            description = "Updated description", autoApproveBookings = true
         });
 
         status.Should().Be(HttpStatusCode.OK);
-        updated!.GetProperty("firstName").GetString().Should().Be("New");
+        updated!.GetProperty("description").GetString().Should().Be("Updated description");
     }
 
     // ── DELETE /api/masters/{id} ───────────────────────────────────────────────

@@ -11,7 +11,7 @@ public record RegisterRequest(
 
 public record LoginRequest(string Email, string Password);
 
-public record GoogleAuthRequest(string Credential);
+public record GoogleAuthRequest(string? Credential = null, string? AccessToken = null);
 
 public record FacebookAuthRequest(string AccessToken);
 
@@ -27,7 +27,7 @@ public record MasterRegisterRequest(
     Guid SalonId);
 
 /// <summary>Register a new master via Google. Account is inactive until SuperAdmin activates it.</summary>
-public record MasterGoogleAuthRequest(string Credential, Guid SalonId);
+public record MasterGoogleAuthRequest(string? Credential = null, string? AccessToken = null, Guid SalonId = default);
 
 /// <summary>Register a new master via Facebook. Account is inactive until SuperAdmin activates it.</summary>
 public record MasterFacebookAuthRequest(string AccessToken, Guid SalonId);

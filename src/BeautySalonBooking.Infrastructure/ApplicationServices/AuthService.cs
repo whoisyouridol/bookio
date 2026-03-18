@@ -94,7 +94,7 @@ public class AuthService
 
     public async Task<(AuthResponse? result, string? rawRefresh, string? error)> LoginWithGoogleAsync(GoogleAuthRequest req)
     {
-        var (email, name, googleId) = await ValidateGoogleTokenAsync(req.Credential);
+        var (email, name, googleId) = await ValidateGoogleRequestAsync(req.Credential, req.AccessToken);
         if (email == null || googleId == null)
             return (null, null, "Invalid Google credential");
 
@@ -170,7 +170,7 @@ public class AuthService
 
     public async Task<(string? message, string? error)> RegisterMasterWithGoogleAsync(MasterGoogleAuthRequest req)
     {
-        var (email, name, googleId) = await ValidateGoogleTokenAsync(req.Credential);
+        var (email, name, googleId) = await ValidateGoogleRequestAsync(req.Credential, req.AccessToken);
         if (email == null || googleId == null)
             return (null, "Invalid Google credential");
 
@@ -547,6 +547,39 @@ public class AuthService
 
     // ── External provider validation ──────────────────────────────────────────
 
+    /// <summary>Validate Google auth — tries id_token first, falls back to access_token.</summary>
+    private async Task<(string? Email, string? Name, string? GoogleId)> ValidateGoogleRequestAsync(
+        string? credential, string? accessToken)
+    {
+        if (!string.IsNullOrEmpty(credential))
+            return await ValidateGoogleTokenAsync(credential);
+        if (!string.IsNullOrEmpty(accessToken))
+            return await ValidateGoogleAccessTokenAsync(accessToken);
+        return default;
+    }
+
+    private async Task<(string? Email, string? Name, string? GoogleId)> ValidateGoogleAccessTokenAsync(string accessToken)
+    {
+        try
+        {
+            var client = _http.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://www.googleapis.com/oauth2/v3/userinfo");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+            var resp = await client.SendAsync(request);
+            if (!resp.IsSuccessStatusCode) return default;
+
+            var json = await resp.Content.ReadFromJsonAsync<GoogleUserInfo>();
+            if (json?.Email == null) return default;
+
+            return (json.Email, json.Name, json.Sub);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Google access token validation failed");
+            return default;
+        }
+    }
+
     private async Task<(string? Email, string? Name, string? GoogleId)> ValidateGoogleTokenAsync(string credential)
     {
         try
@@ -607,6 +640,13 @@ public class AuthService
         [JsonPropertyName("email")] public string? Email { get; set; }
         [JsonPropertyName("name")] public string? Name { get; set; }
         [JsonPropertyName("aud")] public string? Aud { get; set; }
+    }
+
+    private sealed class GoogleUserInfo
+    {
+        [JsonPropertyName("sub")] public string? Sub { get; set; }
+        [JsonPropertyName("email")] public string? Email { get; set; }
+        [JsonPropertyName("name")] public string? Name { get; set; }
     }
 
     private sealed class FacebookUserInfo

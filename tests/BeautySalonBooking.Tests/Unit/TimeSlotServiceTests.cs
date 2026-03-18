@@ -4,6 +4,7 @@ using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using BeautySalonBooking.Tests.Unit.Helpers;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 
 namespace BeautySalonBooking.Tests.Unit;
 
@@ -12,7 +13,7 @@ public class TimeSlotServiceTests
     private static TimeSlotService CreateService()
     {
         var db = InMemoryDbHelper.Create();
-        return new TimeSlotService(db, new AvailabilityService(db));
+        return new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
     }
 
     // ── Generate ────────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ public class TimeSlotServiceTests
     public async Task Generate_CreatesCorrectNumberOfSlots()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -44,7 +45,7 @@ public class TimeSlotServiceTests
     public async Task Generate_SkipsNonWorkingDays()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -66,7 +67,7 @@ public class TimeSlotServiceTests
     public async Task Generate_SkipsDuplicateSlots()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -101,7 +102,7 @@ public class TimeSlotServiceTests
     public async Task GetAvailable_ReturnsAllAvailableSlots_WhenNoServiceFilter()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -119,7 +120,7 @@ public class TimeSlotServiceTests
     public async Task GetAvailable_FiltersSlots_ByServiceDuration()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -153,7 +154,7 @@ public class TimeSlotServiceTests
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);
 
-        var (slots, error) = await new TimeSlotService(db, new AvailabilityService(db))
+        var (slots, error) = await new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()))
             .GetAvailableAsync(salon.Id, master.Id, "not-a-date", null);
 
         error.Should().NotBeNull();
@@ -165,7 +166,7 @@ public class TimeSlotServiceTests
     public async Task UpdateStatus_ChangesSlotStatus()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -194,7 +195,7 @@ public class TimeSlotServiceTests
     public async Task Delete_RemovesSlot()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -213,7 +214,7 @@ public class TimeSlotServiceTests
     public async Task Generate_UsesAvailabilityRules_WhenConfigured()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -240,7 +241,7 @@ public class TimeSlotServiceTests
     public async Task Generate_RespectsTimeOff_WithAvailabilityRules()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -271,7 +272,7 @@ public class TimeSlotServiceTests
     public async Task Generate_RespectsDateOverride_WithAvailabilityRules()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -308,7 +309,7 @@ public class TimeSlotServiceTests
     public async Task Generate_SplitShift_CreatesCorrectSlots()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);
@@ -331,7 +332,7 @@ public class TimeSlotServiceTests
     public async Task Generate_FallsBackToLegacy_WhenNoAvailabilityRules()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new TimeSlotService(db, new AvailabilityService(db));
+        var svc = new TimeSlotService(db, new AvailabilityService(db, new ConfigurationBuilder().Build()));
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         await TestData.LinkMasterAsync(db, salon.Id, master.Id);

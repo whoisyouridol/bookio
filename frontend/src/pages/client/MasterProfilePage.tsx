@@ -9,10 +9,13 @@ import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import { useBooking } from '@/contexts/BookingContext';
+import { useSalonId } from '@/hooks/useSalonId';
+import { isOnSubdomain } from '@/lib/subdomain';
 import type { MasterServiceDto } from '@/types';
 
 export default function MasterProfilePage() {
-  const { salonId, masterId } = useParams<{ salonId: string; masterId: string }>();
+  const { masterId } = useParams<{ masterId: string }>();
+  const salonId = useSalonId();
   const navigate = useNavigate();
   const booking = useBooking();
   const { setSalon, setMaster, toggleService, selectedServices, totalPrice, totalDuration } = booking;
@@ -49,7 +52,7 @@ export default function MasterProfilePage() {
   };
 
   const handleBook = () => {
-    navigate(`/salon/${salonId}/master/${masterId}/book`);
+    navigate(isOnSubdomain() ? `/master/${masterId}/book` : `/salon/${salonId}/master/${masterId}/book`);
   };
 
   if (loadingMaster) return <Loader />;

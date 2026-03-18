@@ -10,6 +10,9 @@ public class CreateSalonValidator : AbstractValidator<CreateSalonRequest>
     public CreateSalonValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Slug).MaximumLength(100)
+            .Matches(@"^[a-z0-9\-]+$").WithMessage("Slug may only contain lowercase letters, digits, and hyphens")
+            .When(x => !string.IsNullOrEmpty(x.Slug));
         RuleFor(x => x.Address).NotEmpty().MaximumLength(500);
         RuleFor(x => x.WorkingHoursStart).NotEmpty().Matches(@"^\d{2}:\d{2}$").WithMessage("Use HH:mm format");
         RuleFor(x => x.WorkingHoursEnd).NotEmpty().Matches(@"^\d{2}:\d{2}$").WithMessage("Use HH:mm format");
@@ -24,6 +27,9 @@ public class UpdateSalonValidator : AbstractValidator<UpdateSalonRequest>
     public UpdateSalonValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Slug).MaximumLength(100)
+            .Matches(@"^[a-z0-9\-]+$").WithMessage("Slug may only contain lowercase letters, digits, and hyphens")
+            .When(x => !string.IsNullOrEmpty(x.Slug));
         RuleFor(x => x.Address).NotEmpty().MaximumLength(500);
         RuleFor(x => x.WorkingHoursStart).NotEmpty().Matches(@"^\d{2}:\d{2}$").WithMessage("Use HH:mm format");
         RuleFor(x => x.WorkingHoursEnd).NotEmpty().Matches(@"^\d{2}:\d{2}$").WithMessage("Use HH:mm format");

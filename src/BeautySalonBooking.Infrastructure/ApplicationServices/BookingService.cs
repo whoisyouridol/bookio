@@ -5,6 +5,7 @@ using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 // TimeSlotStatus import kept for potential legacy compatibility
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
@@ -14,13 +15,19 @@ public class BookingService
     private readonly AppDbContext _db;
     private readonly AvailabilityService _availability;
     private readonly INotificationService _notifications;
+    private readonly int _tzOffsetHours;
 
-    public BookingService(AppDbContext db, AvailabilityService availability, INotificationService notifications)
+    public BookingService(AppDbContext db, AvailabilityService availability,
+        INotificationService notifications, IConfiguration config)
     {
         _db = db;
         _availability = availability;
         _notifications = notifications;
+        _tzOffsetHours = config.GetValue<int>("Booking:TimezoneOffsetHours", 0);
     }
+
+    /// <summary>Returns the current "local now" for the business timezone.</summary>
+    private DateTime LocalNow => DateTime.UtcNow.AddHours(_tzOffsetHours);
 
     public async Task<List<BookingDto>> GetAllAsync(BookingFilterRequest filter)
     {
@@ -73,6 +80,11 @@ public class BookingService
             return (null, "Invalid booking date");
         if (!TimeOnly.TryParse(req.StartTime, out var startTime))
             return (null, "Invalid start time");
+
+        // Reject bookings in the past using the configured business timezone.
+        // Booking datetimes are stored in local time; LocalNow converts UTC to local.
+        if (date.ToDateTime(startTime) < LocalNow)
+            return (null, "Cannot book appointments in the past");
 
         var salonExists = await _db.Salons.AnyAsync(s => s.Id == req.SalonId && s.IsActive);
         if (!salonExists) return (null, "Salon not found");

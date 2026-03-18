@@ -3,6 +3,7 @@ using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using BeautySalonBooking.Tests.Unit.Helpers;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 
 namespace BeautySalonBooking.Tests.Unit;
 
@@ -11,7 +12,7 @@ public class AvailabilityServiceTests
     private static async Task<(Infrastructure.Persistence.AppDbContext db, AvailabilityService svc, Salon salon, Master master, SalonMaster sm)> SetupAsync()
     {
         var db = InMemoryDbHelper.Create();
-        var svc = new AvailabilityService(db);
+        var svc = new AvailabilityService(db, new ConfigurationBuilder().Build());
         var salon = await TestData.CreateSalonAsync(db);
         var master = await TestData.CreateMasterAsync(db);
         var sm = await TestData.LinkMasterAsync(db, salon.Id, master.Id);

@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'sonner';
 import App from './App';
+import SubdomainApp from './SubdomainApp';
 import { AuthProvider } from './contexts/AuthContext';
 import { initFacebookSDK } from './lib/facebook';
+import { isOnSubdomain } from './lib/subdomain';
 import './styles/index.css';
 
 initFacebookSDK();
@@ -44,7 +46,7 @@ createRoot(document.getElementById('root')!).render(
       <GoogleOAuthProvider clientId={googleClientId}>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
-            <App />
+            {isOnSubdomain() ? <SubdomainApp /> : <App />}
             <Toaster position="top-center" richColors />
           </QueryClientProvider>
         </AuthProvider>

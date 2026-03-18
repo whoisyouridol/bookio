@@ -14,19 +14,27 @@ import { FormField } from '@/components/ui/FormField';
 import { Loader } from '@/components/ui/Loader';
 import { useBooking } from '@/contexts/BookingContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSalonId } from '@/hooks/useSalonId';
 import { toast } from 'sonner';
 import type { TimeSlotDto } from '@/types';
 
 type Step = 'datetime' | 'details' | 'review';
 
 export default function BookingFlowPage() {
-  const { salonId, masterId } = useParams<{ salonId: string; masterId: string }>();
+  const { masterId } = useParams<{ masterId: string }>();
+  const salonId = useSalonId();
   const navigate = useNavigate();
   const booking = useBooking();
   const { user } = useAuth();
 
   const [step, setStep] = useState<Step>('datetime');
   const [selectedDate, setSelectedDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+  const handleDateChange = (val: string) => {
+    // Guard: never allow selecting a past date even if browser doesn't enforce min
+    if (val < format(startOfDay(new Date()), 'yyyy-MM-dd')) return;
+    setSelectedDate(val);
+    setSelectedSlot(null);
+  };
   const [selectedSlot, setSelectedSlot] = useState<TimeSlotDto | null>(null);
   const [clientName, setClientName] = useState(
     user ? [user.firstName, user.lastName].filter(Boolean).join(' ') : ''
@@ -78,10 +86,15 @@ export default function BookingFlowPage() {
   }
 
   const today = startOfDay(new Date());
-
-  // Generate next 30 days to show in date picker
-  const minDate = format(addDays(today, 0), 'yyyy-MM-dd');
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const minDate = todayStr;
   const maxDate = format(addDays(today, 60), 'yyyy-MM-dd');
+
+  // For today, hide slots that have already passed (local time)
+  const currentTimeStr = format(new Date(), 'HH:mm');
+  const visibleSlots = selectedDate === todayStr
+    ? (slots ?? []).filter(s => s.startTime > currentTimeStr)
+    : (slots ?? []);
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
@@ -118,7 +131,7 @@ export default function BookingFlowPage() {
                 value={selectedDate}
                 min={minDate}
                 max={maxDate}
-                onChange={e => { setSelectedDate(e.target.value); setSelectedSlot(null); }}
+                onChange={e => handleDateChange(e.target.value)}
                 className="w-full p-3 border border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] focus:outline-none focus:border-[var(--color-primary)]"
                 style={{ borderRadius: 'var(--border-radius)' }}
               />
@@ -130,7 +143,7 @@ export default function BookingFlowPage() {
                 <Loader />
               ) : (
                 <TimeSlotGrid
-                  slots={slots ?? []}
+                  slots={visibleSlots}
                   selectedStartTime={selectedSlot?.startTime ?? null}
                   onSelect={setSelectedSlot}
                 />

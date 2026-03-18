@@ -7,6 +7,9 @@ export const getSalons = () =>
 export const getSalon = (id: string) =>
   apiClient.get<SalonDetailDto>(`/salons/${id}`).then(r => r.data);
 
+export const getSalonBySlug = (slug: string) =>
+  apiClient.get<SalonDetailDto>(`/salons/by-slug/${slug}`).then(r => r.data);
+
 export const createSalon = (data: CreateSalonRequest) =>
   apiClient.post<SalonDto>('/salons', data).then(r => r.data);
 

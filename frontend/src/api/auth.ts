@@ -16,6 +16,11 @@ export async function loginWithGoogle(credential: string): Promise<AuthResponse>
   return res;
 }
 
+export async function loginWithGoogleAccessToken(accessToken: string): Promise<AuthResponse> {
+  const { data: res } = await apiClient.post<AuthResponse>('/auth/google', { accessToken });
+  return res;
+}
+
 export async function loginWithFacebook(accessToken: string): Promise<AuthResponse> {
   const { data: res } = await apiClient.post<AuthResponse>('/auth/facebook', { accessToken });
   return res;
@@ -56,6 +61,11 @@ export async function registerMaster(data: {
 
 export async function registerMasterWithGoogle(credential: string, salonId: string): Promise<{ message: string }> {
   const { data } = await apiClient.post<{ message: string }>('/auth/master/google', { credential, salonId });
+  return data;
+}
+
+export async function registerMasterWithGoogleAccessToken(accessToken: string, salonId: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>('/auth/master/google', { accessToken, salonId });
   return data;
 }
 

@@ -6,12 +6,14 @@ import type { MasterDto } from '@/types';
 interface MasterCardProps {
   master: MasterDto;
   salonId: string;
+  linkPrefix?: string;
 }
 
-export function MasterCard({ master, salonId }: MasterCardProps) {
+export function MasterCard({ master, salonId, linkPrefix }: MasterCardProps) {
+  const basePath = linkPrefix !== undefined ? linkPrefix : `/salon/${salonId}`;
   return (
     <Link
-      to={`/salon/${salonId}/master/${master.id}`}
+      to={`${basePath}/master/${master.id}`}
       className="flex items-center gap-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)] hover:shadow-md transition-shadow"
       style={{ borderRadius: 'var(--border-radius)' }}
     >

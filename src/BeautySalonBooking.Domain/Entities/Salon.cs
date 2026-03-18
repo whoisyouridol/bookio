@@ -4,6 +4,7 @@ public class Salon
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? Slug { get; set; }
     public string Address { get; set; } = string.Empty;
     public string? GoogleMapsUrl { get; set; }
     public string? YandexMapsUrl { get; set; }
@@ -12,6 +13,10 @@ public class Salon
     public List<DayOfWeek> WorkingDays { get; set; } = new();
     public List<string> Photos { get; set; } = new();
     public List<string> Videos { get; set; } = new();
+    public string? PrimaryColor { get; set; }
+    public string? AccentColor { get; set; }
+    public string? BorderRadius { get; set; }
+    public string? LogoUrl { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

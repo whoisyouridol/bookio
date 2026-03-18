@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Infrastructure.Entities;
@@ -25,35 +26,29 @@ public class SalonService
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (salon == null) return null;
+        return await MapToDetailDto(salon);
+    }
 
-        var masterIds = salon.SalonMasters.Select(sm => sm.MasterId).ToList();
-        var userByMaster = await GetUsersByMasterIdsAsync(masterIds);
+    public async Task<SalonDetailDto?> GetBySlugAsync(string slug)
+    {
+        var salon = await _db.Salons
+            .Include(s => s.SalonMasters.Where(sm => sm.IsActive))
+            .FirstOrDefaultAsync(s => s.Slug == slug && s.IsActive);
 
-        var masters = salon.SalonMasters.Select(sm => new SalonMasterDto(
-            sm.Id, sm.SalonId, sm.MasterId,
-            userByMaster.GetValueOrDefault(sm.MasterId)?.FirstName ?? string.Empty,
-            userByMaster.GetValueOrDefault(sm.MasterId)?.LastName ?? string.Empty,
-            sm.WorkingHoursStart.ToString("HH:mm"),
-            sm.WorkingHoursEnd.ToString("HH:mm"),
-            sm.WorkingDays.Select(d => d.ToString()).ToList(),
-            sm.IsActive
-        )).ToList();
-
-        return new SalonDetailDto(
-            salon.Id, salon.Name, salon.Address,
-            salon.GoogleMapsUrl, salon.YandexMapsUrl,
-            salon.WorkingHoursStart.ToString("HH:mm"),
-            salon.WorkingHoursEnd.ToString("HH:mm"),
-            salon.WorkingDays.Select(d => d.ToString()).ToList(),
-            salon.Photos, salon.Videos, salon.IsActive, salon.CreatedAt, masters);
+        if (salon == null) return null;
+        return await MapToDetailDto(salon);
     }
 
     public async Task<SalonDto> CreateAsync(CreateSalonRequest req)
     {
+        var slug = !string.IsNullOrWhiteSpace(req.Slug) ? req.Slug : GenerateSlug(req.Name);
+        slug = await EnsureUniqueSlug(slug, null);
+
         var salon = new Salon
         {
             Id = Guid.NewGuid(),
             Name = req.Name,
+            Slug = slug,
             Address = req.Address,
             GoogleMapsUrl = req.GoogleMapsUrl,
             YandexMapsUrl = req.YandexMapsUrl,
@@ -62,6 +57,10 @@ public class SalonService
             WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList(),
             Photos = req.Photos ?? new(),
             Videos = req.Videos ?? new(),
+            PrimaryColor = req.PrimaryColor,
+            AccentColor = req.AccentColor,
+            BorderRadius = req.BorderRadius,
+            LogoUrl = req.LogoUrl,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -75,6 +74,11 @@ public class SalonService
         var salon = await _db.Salons.FindAsync(id);
         if (salon == null) return null;
 
+        if (!string.IsNullOrWhiteSpace(req.Slug))
+            salon.Slug = await EnsureUniqueSlug(req.Slug, id);
+        else if (salon.Slug == null)
+            salon.Slug = await EnsureUniqueSlug(GenerateSlug(req.Name), id);
+
         salon.Name = req.Name;
         salon.Address = req.Address;
         salon.GoogleMapsUrl = req.GoogleMapsUrl;
@@ -84,6 +88,10 @@ public class SalonService
         salon.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
         salon.Photos = req.Photos ?? new();
         salon.Videos = req.Videos ?? new();
+        salon.PrimaryColor = req.PrimaryColor;
+        salon.AccentColor = req.AccentColor;
+        salon.BorderRadius = req.BorderRadius;
+        salon.LogoUrl = req.LogoUrl;
         salon.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -143,10 +151,71 @@ public class SalonService
         )).ToList();
     }
 
+    // ── Slug helpers ──────────────────────────────────────────────────────────
+
+    internal static string GenerateSlug(string name)
+    {
+        var slug = name.ToLowerInvariant().Trim();
+        slug = Regex.Replace(slug, @"[^a-z0-9\s-]", "");
+        slug = Regex.Replace(slug, @"[\s]+", "-");
+        slug = Regex.Replace(slug, @"-{2,}", "-");
+        slug = slug.Trim('-');
+        return string.IsNullOrEmpty(slug) ? "salon" : slug;
+    }
+
+    private async Task<string> EnsureUniqueSlug(string slug, Guid? excludeId)
+    {
+        var existing = await _db.Salons
+            .Where(s => s.Slug == slug && (excludeId == null || s.Id != excludeId))
+            .AnyAsync();
+
+        if (!existing) return slug;
+
+        // Append random suffix
+        for (int i = 1; i <= 100; i++)
+        {
+            var candidate = $"{slug}-{i}";
+            if (!await _db.Salons.AnyAsync(s => s.Slug == candidate && (excludeId == null || s.Id != excludeId)))
+                return candidate;
+        }
+
+        return $"{slug}-{Guid.NewGuid().ToString()[..6]}";
+    }
+
+    // ── Mapping ───────────────────────────────────────────────────────────────
+
     private static SalonDto MapToDto(Salon s) => new(
-        s.Id, s.Name, s.Address, s.GoogleMapsUrl, s.YandexMapsUrl,
+        s.Id, s.Name, s.Slug, s.Address, s.GoogleMapsUrl, s.YandexMapsUrl,
         s.WorkingHoursStart.ToString("HH:mm"),
         s.WorkingHoursEnd.ToString("HH:mm"),
         s.WorkingDays.Select(d => d.ToString()).ToList(),
-        s.Photos, s.Videos, s.IsActive, s.CreatedAt);
+        s.Photos, s.Videos,
+        s.PrimaryColor, s.AccentColor, s.BorderRadius, s.LogoUrl,
+        s.IsActive, s.CreatedAt);
+
+    private async Task<SalonDetailDto> MapToDetailDto(Salon salon)
+    {
+        var masterIds = salon.SalonMasters.Select(sm => sm.MasterId).ToList();
+        var userByMaster = await GetUsersByMasterIdsAsync(masterIds);
+
+        var masters = salon.SalonMasters.Select(sm => new SalonMasterDto(
+            sm.Id, sm.SalonId, sm.MasterId,
+            userByMaster.GetValueOrDefault(sm.MasterId)?.FirstName ?? string.Empty,
+            userByMaster.GetValueOrDefault(sm.MasterId)?.LastName ?? string.Empty,
+            sm.WorkingHoursStart.ToString("HH:mm"),
+            sm.WorkingHoursEnd.ToString("HH:mm"),
+            sm.WorkingDays.Select(d => d.ToString()).ToList(),
+            sm.IsActive
+        )).ToList();
+
+        return new SalonDetailDto(
+            salon.Id, salon.Name, salon.Slug, salon.Address,
+            salon.GoogleMapsUrl, salon.YandexMapsUrl,
+            salon.WorkingHoursStart.ToString("HH:mm"),
+            salon.WorkingHoursEnd.ToString("HH:mm"),
+            salon.WorkingDays.Select(d => d.ToString()).ToList(),
+            salon.Photos, salon.Videos,
+            salon.PrimaryColor, salon.AccentColor, salon.BorderRadius, salon.LogoUrl,
+            salon.IsActive, salon.CreatedAt, masters);
+    }
 }

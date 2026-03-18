@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { SalonTheme } from '@/types';
 
 const defaultTheme: SalonTheme = {
@@ -26,8 +26,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<SalonTheme>(defaultTheme);
 
-  const setTheme = (newTheme: SalonTheme) => setThemeState(newTheme);
-  const resetTheme = () => setThemeState(defaultTheme);
+  const setTheme = useCallback((newTheme: SalonTheme) => setThemeState(newTheme), []);
+  const resetTheme = useCallback(() => setThemeState(defaultTheme), []);
 
   useEffect(() => {
     const root = document.documentElement;

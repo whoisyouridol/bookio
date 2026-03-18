@@ -12,7 +12,7 @@ public class MasterServicesControllerTests : IntegrationTestBase
     private async Task<(string masterId, string serviceId)> CreateMasterAndServiceAsync()
     {
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { firstName = "MS", lastName = "Test", phone = "+70000001111" });
+            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "MS", lastName = "Test", phone = "+70000001111" });
         var (service, _) = await PostAsync<JsonElement>("/api/services",
             new { name = $"Svc-{Guid.NewGuid()}" });
         return (master.GetProperty("id").GetString()!, service.GetProperty("id").GetString()!);

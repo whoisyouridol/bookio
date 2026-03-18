@@ -4,6 +4,7 @@ import {
   login as apiLogin,
   register as apiRegister,
   loginWithGoogle as apiLoginWithGoogle,
+  loginWithGoogleAccessToken as apiLoginWithGoogleAccessToken,
   loginWithFacebook as apiLoginWithFacebook,
   refreshSession,
   logout as apiLogout,
@@ -32,6 +33,7 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<UserDto>;
   register: (data: RegisterRequest) => Promise<UserDto>;
   loginWithGoogle: (credential: string) => Promise<UserDto>;
+  loginWithGoogleAccessToken: (accessToken: string) => Promise<UserDto>;
   loginWithFacebook: (accessToken: string) => Promise<UserDto>;
   logout: () => Promise<void>;
 }
@@ -64,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async (credential: string) =>
     applyAuth(await apiLoginWithGoogle(credential));
 
+  const loginWithGoogleAccessToken = async (accessToken: string) =>
+    applyAuth(await apiLoginWithGoogleAccessToken(accessToken));
+
   const loginWithFacebook = async (accessToken: string) =>
     applyAuth(await apiLoginWithFacebook(accessToken));
 
@@ -82,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, role, salonId, masterId,
       isLoading,
       isAuthenticated: user !== null,
-      login, register, loginWithGoogle, loginWithFacebook, logout,
+      login, register, loginWithGoogle, loginWithGoogleAccessToken, loginWithFacebook, logout,
     }}>
       {children}
     </AuthContext.Provider>

@@ -8,6 +8,7 @@ import MasterRegisterPage from '@/pages/auth/MasterRegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import ForceChangePasswordPage from '@/pages/auth/ForceChangePasswordPage';
+import GooglePopupRedirectPage from '@/pages/auth/GooglePopupRedirectPage';
 
 // Client layout + pages
 import ClientRoot from '@/pages/client/Root';
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
   { path: '/auth/forgot-password', Component: ForgotPasswordPage },
   { path: '/auth/reset-password', Component: ResetPasswordPage },
   { path: '/auth/force-change-password', Component: ForceChangePasswordPage },
+  { path: '/auth/google-popup', Component: GooglePopupRedirectPage },
 
   // ── Client routes ──────────────────────────────────────────────────────────
   {

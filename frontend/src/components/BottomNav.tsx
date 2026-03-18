@@ -1,6 +1,7 @@
 import { Home, Calendar, Settings, LogIn, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { isOnSubdomain } from '@/lib/subdomain';
 
 export function BottomNav() {
   const { pathname } = useLocation();
@@ -8,11 +9,12 @@ export function BottomNav() {
   const { role, isAuthenticated, logout } = useAuth();
 
   const isAdmin = role !== 'client';
+  const subdomain = isOnSubdomain();
 
   const items = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/bookings', icon: Calendar, label: 'My Bookings' },
-    ...(isAdmin ? [{ path: '/admin', icon: Settings, label: 'Admin' }] : []),
+    ...(!subdomain && isAdmin ? [{ path: '/admin', icon: Settings, label: 'Admin' }] : []),
   ];
 
   const handleLogout = async () => {

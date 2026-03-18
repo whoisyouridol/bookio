@@ -37,6 +37,15 @@ public class SalonsController : ControllerBase
         return salon == null ? NotFound() : Ok(salon);
     }
 
+    /// <summary>Get salon by subdomain slug</summary>
+    [AllowAnonymous]
+    [HttpGet("by-slug/{slug}")]
+    public async Task<IActionResult> GetBySlug(string slug)
+    {
+        var salon = await _salonService.GetBySlugAsync(slug);
+        return salon == null ? NotFound() : Ok(salon);
+    }
+
     /// <summary>Create a new salon</summary>
     [Authorize]
     [HttpPost]

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/error';
+import { isOnSubdomain } from '@/lib/subdomain';
 
 type AccountRole = 'Client' | 'SalonAdmin' | 'MasterAdmin';
 
@@ -66,7 +67,7 @@ export default function RegisterPage() {
         role,
       });
       toast.success('Account created!');
-      setRedirectTo(user.role === 'Client' ? '/' : '/admin');
+      setRedirectTo(isOnSubdomain() ? '/' : (user.role === 'Client' ? '/' : '/admin'));
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Registration failed'));
     } finally {

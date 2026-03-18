@@ -3,6 +3,7 @@
 export interface SalonDto {
   id: string;
   name: string;
+  slug?: string;
   address: string;
   googleMapsUrl?: string;
   yandexMapsUrl?: string;
@@ -11,6 +12,10 @@ export interface SalonDto {
   workingDays: string[];
   photos: string[];
   videos: string[];
+  primaryColor?: string;
+  accentColor?: string;
+  borderRadius?: string;
+  logoUrl?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -21,6 +26,7 @@ export interface SalonDetailDto extends SalonDto {
 
 export interface CreateSalonRequest {
   name: string;
+  slug?: string;
   address: string;
   googleMapsUrl?: string;
   yandexMapsUrl?: string;
@@ -29,6 +35,10 @@ export interface CreateSalonRequest {
   workingDays: string[];
   photos?: string[];
   videos?: string[];
+  primaryColor?: string;
+  accentColor?: string;
+  borderRadius?: string;
+  logoUrl?: string;
 }
 
 export type UpdateSalonRequest = CreateSalonRequest;

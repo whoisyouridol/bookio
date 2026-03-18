@@ -14,9 +14,15 @@ public class SalonConfiguration : IEntityTypeConfiguration<Salon>
     {
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Name).IsRequired().HasMaxLength(200);
+        builder.Property(s => s.Slug).HasMaxLength(100);
+        builder.HasIndex(s => s.Slug).IsUnique().HasFilter("\"Slug\" IS NOT NULL");
         builder.Property(s => s.Address).IsRequired().HasMaxLength(500);
         builder.Property(s => s.GoogleMapsUrl).HasMaxLength(1000);
         builder.Property(s => s.YandexMapsUrl).HasMaxLength(1000);
+        builder.Property(s => s.PrimaryColor).HasMaxLength(20);
+        builder.Property(s => s.AccentColor).HasMaxLength(20);
+        builder.Property(s => s.BorderRadius).HasMaxLength(20);
+        builder.Property(s => s.LogoUrl).HasMaxLength(1000);
 
         var listDowComparer = new ValueComparer<List<DayOfWeek>>(
             (a, b) => a != null && b != null && a.SequenceEqual(b),

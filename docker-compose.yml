@@ -21,8 +21,8 @@ services:
     # Do NOT expose port 5432 to host in production —
     # only the api container needs it via internal network.
     # Uncomment below for local debugging only:
-    # ports:
-    #   - "5433:5432"
+    ports:
+      - "5433:5432"
 
   # ── MinIO ────────────────────────────────────────────────────────────────────
   minio:

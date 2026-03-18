@@ -12,7 +12,7 @@ public class RatingsControllerTests : IntegrationTestBase
     private async Task<string> CreateMasterAsync()
     {
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { firstName = "Rate", lastName = "Me", phone = "+70001110088" });
+            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Rate", lastName = "Me", phone = "+70001110088" });
         return master.GetProperty("id").GetString()!;
     }
 

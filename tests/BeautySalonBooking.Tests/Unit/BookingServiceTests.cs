@@ -5,6 +5,7 @@ using BeautySalonBooking.Infrastructure.ApplicationServices;
 using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Tests.Unit.Helpers;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Moq;
 
 namespace BeautySalonBooking.Tests.Unit;
@@ -15,8 +16,8 @@ public class BookingServiceTests
 
     private BookingService BuildService(AppDbContext db)
     {
-        var availability = new AvailabilityService(db);
-        return new BookingService(db, availability, _notifMock.Object);
+        var availability = new AvailabilityService(db, new ConfigurationBuilder().Build());
+        return new BookingService(db, availability, _notifMock.Object, new ConfigurationBuilder().Build());
     }
 
     private BookingService BuildService(InMemoryDbHelper.Ctx ctx) => BuildService(ctx.Db);
@@ -39,9 +40,9 @@ public class BookingServiceTests
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, price: 1500, duration: 60);
 
-        // 2026-03-09 is a Monday — within SalonMaster.WorkingDays
+        // 2026-03-23 is a Monday — within SalonMaster.WorkingDays
         // SalonMaster has WorkingHoursStart=09:00, WorkingHoursEnd=18:00
-        var date = new DateOnly(2026, 3, 9);
+        var date = new DateOnly(2026, 3, 23);
         var start = new TimeOnly(10, 0);
 
         return (ctx, svc, salon.Id, master.Id, service.Id, sm.Id, date, start);
@@ -126,7 +127,7 @@ public class BookingServiceTests
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s1.Id, price: 1000, duration: 60);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s2.Id, price: 2000, duration: 60);
 
-        var date = new DateOnly(2026, 3, 9); // Monday
+        var date = new DateOnly(2026, 3, 23); // Monday
         var start = new TimeOnly(9, 0);
 
         var req = new CreateBookingRequest(salon.Id, master.Id, "Dan", "+70000000002", null,

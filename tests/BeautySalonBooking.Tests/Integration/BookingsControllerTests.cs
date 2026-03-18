@@ -20,7 +20,7 @@ public class BookingsControllerTests : IntegrationTestBase
             workingDays = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" }
         });
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { firstName = "Book", lastName = "Master", phone = "+70001110000", autoApproveBookings });
+            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Book", lastName = "Master", phone = "+70001110000", autoApproveBookings });
         var salonId = salon.GetProperty("id").GetString()!;
         var masterId = master.GetProperty("id").GetString()!;
 
@@ -93,7 +93,7 @@ public class BookingsControllerTests : IntegrationTestBase
             workingDays = new[] { "Monday" }
         });
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { firstName = "U", lastName = "U", phone = "+70001111119" });
+            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "U", lastName = "U", phone = "+70001111119" });
         var (service, _) = await PostAsync<JsonElement>("/api/services", new { name = "UX" });
         await PostAsync<JsonElement>($"/api/masters/{master.GetProperty("id")}/services",
             new { serviceId = service.GetProperty("id").GetString(), price = 100, durationMinutes = 30 });

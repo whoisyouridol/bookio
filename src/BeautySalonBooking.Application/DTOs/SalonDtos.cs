@@ -3,6 +3,7 @@ namespace BeautySalonBooking.Application.DTOs;
 public record SalonDto(
     Guid Id,
     string Name,
+    string? Slug,
     string Address,
     string? GoogleMapsUrl,
     string? YandexMapsUrl,
@@ -11,6 +12,10 @@ public record SalonDto(
     List<string> WorkingDays,
     List<string> Photos,
     List<string> Videos,
+    string? PrimaryColor,
+    string? AccentColor,
+    string? BorderRadius,
+    string? LogoUrl,
     bool IsActive,
     DateTime CreatedAt
 );
@@ -18,6 +23,7 @@ public record SalonDto(
 public record SalonDetailDto(
     Guid Id,
     string Name,
+    string? Slug,
     string Address,
     string? GoogleMapsUrl,
     string? YandexMapsUrl,
@@ -26,6 +32,10 @@ public record SalonDetailDto(
     List<string> WorkingDays,
     List<string> Photos,
     List<string> Videos,
+    string? PrimaryColor,
+    string? AccentColor,
+    string? BorderRadius,
+    string? LogoUrl,
     bool IsActive,
     DateTime CreatedAt,
     List<SalonMasterDto> Masters
@@ -33,6 +43,7 @@ public record SalonDetailDto(
 
 public record CreateSalonRequest(
     string Name,
+    string? Slug,
     string Address,
     string? GoogleMapsUrl,
     string? YandexMapsUrl,
@@ -40,11 +51,16 @@ public record CreateSalonRequest(
     string WorkingHoursEnd,
     List<string> WorkingDays,
     List<string>? Photos,
-    List<string>? Videos
+    List<string>? Videos,
+    string? PrimaryColor,
+    string? AccentColor,
+    string? BorderRadius,
+    string? LogoUrl
 );
 
 public record UpdateSalonRequest(
     string Name,
+    string? Slug,
     string Address,
     string? GoogleMapsUrl,
     string? YandexMapsUrl,
@@ -52,5 +68,9 @@ public record UpdateSalonRequest(
     string WorkingHoursEnd,
     List<string> WorkingDays,
     List<string>? Photos,
-    List<string>? Videos
+    List<string>? Videos,
+    string? PrimaryColor,
+    string? AccentColor,
+    string? BorderRadius,
+    string? LogoUrl
 );
