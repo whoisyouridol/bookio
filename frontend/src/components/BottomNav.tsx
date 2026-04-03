@@ -1,9 +1,11 @@
 import { Home, Calendar, Settings, LogIn, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { isOnSubdomain } from '@/lib/subdomain';
 
 export function BottomNav() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { role, isAuthenticated, logout } = useAuth();
@@ -12,9 +14,9 @@ export function BottomNav() {
   const subdomain = isOnSubdomain();
 
   const items = [
-    { path: '/', icon: Home, label: 'Home' },
-    { path: '/bookings', icon: Calendar, label: 'My Bookings' },
-    ...(!subdomain && isAdmin ? [{ path: '/admin', icon: Settings, label: 'Admin' }] : []),
+    { path: '/', icon: Home, label: t('components.bottomNav.home') },
+    { path: '/bookings', icon: Calendar, label: t('components.bottomNav.myBookings') },
+    ...(!subdomain && isAdmin ? [{ path: '/admin', icon: Settings, label: t('components.bottomNav.admin') }] : []),
   ];
 
   const handleLogout = async () => {
@@ -23,7 +25,7 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] z-10">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] z-10 transition-colors">
       <div className="flex justify-around items-center h-16 max-w-md mx-auto">
         {items.map(({ path, icon: Icon, label }) => {
           const active = path === '/' ? pathname === '/' : pathname.startsWith(path);
@@ -44,10 +46,10 @@ export function BottomNav() {
         {isAuthenticated ? (
           <button
             onClick={handleLogout}
-            className="flex flex-col items-center justify-center flex-1 h-full transition-colors text-[var(--color-text-secondary)] hover:text-red-500"
+            className="flex flex-col items-center justify-center flex-1 h-full transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-error)]"
           >
             <LogOut className="w-6 h-6 stroke-2" />
-            <span className="text-xs mt-1 font-medium">Logout</span>
+            <span className="text-xs mt-1 font-medium">{t('components.bottomNav.logout')}</span>
           </button>
         ) : (
           <Link
@@ -57,7 +59,7 @@ export function BottomNav() {
             }`}
           >
             <LogIn className="w-6 h-6 stroke-2" />
-            <span className="text-xs mt-1 font-medium">Login</span>
+            <span className="text-xs mt-1 font-medium">{t('components.bottomNav.login')}</span>
           </Link>
         )}
       </div>

@@ -15,7 +15,7 @@ public class TokenService : ITokenService
     public TokenService(IConfiguration config) => _config = config;
 
     public string GenerateAccessToken(
-        Guid userId, string email, string role,
+        Guid userId, string? email, string role,
         string? firstName, string? lastName,
         Guid? salonId, Guid? masterId)
     {
@@ -26,10 +26,11 @@ public class TokenService : ITokenService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new(JwtRegisteredClaimNames.Email, email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new("role", role),
         };
+        if (email != null)
+            claims.Add(new(JwtRegisteredClaimNames.Email, email));
 
         if (firstName != null) claims.Add(new("firstName", firstName));
         if (lastName != null) claims.Add(new("lastName", lastName));

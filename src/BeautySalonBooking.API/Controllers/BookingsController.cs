@@ -44,14 +44,14 @@ public class BookingsController : ControllerBase
         return booking == null ? NotFound() : Ok(booking);
     }
 
-    /// <summary>Get bookings for the currently authenticated user</summary>
+    /// <summary>Get bookings for the currently authenticated user, optionally filtered by salon</summary>
     [Authorize]
     [HttpGet("my")]
-    public async Task<IActionResult> GetMy()
+    public async Task<IActionResult> GetMy([FromQuery] Guid? salonId)
     {
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         if (!Guid.TryParse(sub, out var userId)) return Unauthorized();
-        return Ok(await _bookingService.GetMyBookingsAsync(userId));
+        return Ok(await _bookingService.GetMyBookingsAsync(userId, salonId));
     }
 
     /// <summary>Create a new booking</summary>

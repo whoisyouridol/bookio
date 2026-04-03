@@ -19,7 +19,7 @@ public class SalonMastersControllerTests : IntegrationTestBase
         });
         var (master, _) = await PostAsync<JsonElement>("/api/masters", new
         {
-            email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Link", lastName = "Test", phone = "+70001112299"
+            email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Link", lastName = "Test", phone = $"+7{Random.Shared.Next(1000000000, 1999999999)}"
         });
         return (salon.GetProperty("id").GetString()!, master.GetProperty("id").GetString()!);
     }

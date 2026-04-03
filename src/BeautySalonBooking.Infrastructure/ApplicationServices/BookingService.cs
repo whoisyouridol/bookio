@@ -62,12 +62,17 @@ public class BookingService
         return MapToDto(b, masterNames.GetValueOrDefault(b.MasterId, ""));
     }
 
-    public async Task<List<BookingDto>> GetMyBookingsAsync(Guid userId)
+    public async Task<List<BookingDto>> GetMyBookingsAsync(Guid userId, Guid? salonId = null)
     {
-        var bookings = await _db.Bookings
+        var query = _db.Bookings
             .Include(b => b.Salon)
             .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
-            .Where(b => b.UserId == userId)
+            .Where(b => b.UserId == userId);
+
+        if (salonId.HasValue)
+            query = query.Where(b => b.SalonId == salonId.Value);
+
+        var bookings = await query
             .OrderByDescending(b => b.BookingDate).ThenBy(b => b.StartTime)
             .ToListAsync();
         var masterNames = await GetMasterNamesAsync(bookings.Select(b => b.MasterId).Distinct());

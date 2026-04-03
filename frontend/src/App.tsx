@@ -33,12 +33,24 @@ import BookingDetailAdminPage from '@/pages/admin/BookingDetailAdminPage';
 import UsersPage from '@/pages/admin/UsersPage';
 import UserDetailPage from '@/pages/admin/UserDetailPage';
 import AvailabilityPage from '@/pages/admin/AvailabilityPage';
+import SalonAdminDashboardPage from '@/pages/admin/SalonAdminDashboardPage';
+import SalonAdminBookingsPage from '@/pages/admin/SalonAdminBookingsPage';
+import SalonAdminMastersPage from '@/pages/admin/SalonAdminMastersPage';
 import NotFoundPage from '@/pages/client/NotFoundPage';
+
+import { useAuth } from '@/contexts/AuthContext';
+
+function AdminDashboardSwitch() {
+  const { role } = useAuth();
+  if (role === 'salon_admin') return <SalonAdminDashboardPage />;
+  return <DashboardPage />;
+}
 
 const router = createBrowserRouter([
   // ── Auth routes ────────────────────────────────────────────────────────────
   { path: '/login', Component: LoginPage },
   { path: '/register', Component: RegisterPage },
+  { path: '/register/professional', Component: MasterRegisterPage },
   { path: '/register/master', Component: MasterRegisterPage },
   { path: '/auth/forgot-password', Component: ForgotPasswordPage },
   { path: '/auth/reset-password', Component: ResetPasswordPage },
@@ -72,14 +84,13 @@ const router = createBrowserRouter([
         index: true,
         element: (
           <RoleGuard
-            allow={['superadmin']}
-            redirect={(role, salonId, masterId) => {
-              if (role === 'salon_admin' && salonId) return `/admin/salons/${salonId}`;
-              if (role === 'master_admin' && masterId) return `/admin/masters/${masterId}`;
+            allow={['superadmin', 'salon_admin']}
+            redirect={(_role, _salonId, masterId) => {
+              if (masterId) return `/admin/masters/${masterId}`;
               return '/admin/bookings';
             }}
           >
-            <DashboardPage />
+            <AdminDashboardSwitch />
           </RoleGuard>
         ),
       },
@@ -122,6 +133,24 @@ const router = createBrowserRouter([
       { path: 'services', element: <ServicesPage /> },
       { path: 'bookings', element: <BookingsAdminPage /> },
       { path: 'bookings/:bookingId', element: <BookingDetailAdminPage /> },
+
+      // Salon admin specific routes
+      {
+        path: 'salon-masters',
+        element: (
+          <RoleGuard allow={['salon_admin']} redirect="/admin">
+            <SalonAdminMastersPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'salon-bookings',
+        element: (
+          <RoleGuard allow={['salon_admin']} redirect="/admin">
+            <SalonAdminBookingsPage />
+          </RoleGuard>
+        ),
+      },
       {
         path: 'users',
         element: (

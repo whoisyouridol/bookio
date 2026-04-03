@@ -1,6 +1,7 @@
 using System.Text;
 using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
+using BeautySalonBooking.Infrastructure.Configuration;
 using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Infrastructure.Services;
@@ -33,7 +34,7 @@ public static class DependencyInjection
             options.Password.RequiredLength = 6;
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
-            options.User.RequireUniqueEmail = true;
+            options.User.RequireUniqueEmail = false;
         })
         .AddEntityFrameworkStores<AppDbContext>()
         .AddDefaultTokenProviders();
@@ -83,6 +84,15 @@ public static class DependencyInjection
         });
         services.AddSingleton<IStorageService, MinioStorageService>();
 
+        // ── Email messages (centralised JSON strings) ─────────────────────────
+        services.AddSingleton<Resources.EmailMessages>();
+
+        // ── SMTP ─────────────────────────────────────────────────────────────
+        services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
+        services.AddScoped<IEmailSender, EmailSender>();
+        services.AddScoped<NotificationJobProcessor>();
+        services.AddScoped<ReminderSchedulerJob>();
+
         // ── Application services ───────────────────────────────────────────────
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ITokenService, TokenService>();
@@ -97,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<AvailabilityService>();
         services.AddScoped<BookingService>();
         services.AddScoped<RatingService>();
+        services.AddScoped<SalonAdminService>();
 
         return services;
     }

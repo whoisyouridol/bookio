@@ -10,11 +10,11 @@ export interface LoginResponse {
 /** Log in and return access token + user info. */
 export async function apiLogin(
   request: APIRequestContext,
-  email: string,
+  identifier: string,
   password: string,
 ): Promise<LoginResponse> {
   const res = await request.post(`${BASE}/auth/login`, {
-    data: { email, password },
+    data: { identifier, password },
   });
   if (!res.ok()) {
     const body = await res.text();

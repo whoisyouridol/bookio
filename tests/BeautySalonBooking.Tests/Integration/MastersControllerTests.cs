@@ -11,7 +11,7 @@ public class MastersControllerTests : IntegrationTestBase
 
     private static object ValidMasterBody(string first = "Jane", string last = "Doe") => new
     {
-        email = $"test-{Guid.NewGuid():N}@test.com", firstName = first, lastName = last, phone = "+70001112233"
+        email = $"test-{Guid.NewGuid():N}@test.com", firstName = first, lastName = last, phone = $"+7{Random.Shared.Next(1000000000, 1999999999)}"
     };
 
     // ── GET /api/masters ──────────────────────────────────────────────────────

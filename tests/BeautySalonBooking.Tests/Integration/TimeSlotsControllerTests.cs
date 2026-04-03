@@ -19,7 +19,7 @@ public class TimeSlotsControllerTests : IntegrationTestBase
             workingDays = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" }
         });
         var (master, _) = await PostAsync<JsonElement>("/api/masters",
-            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Slot", lastName = "Tester", phone = "+70001119999" });
+            new { email = $"test-{Guid.NewGuid():N}@test.com", firstName = "Slot", lastName = "Tester", phone = $"+7{Random.Shared.Next(1000000000, 1999999999)}" });
         var salonId = salon.GetProperty("id").GetString()!;
         var masterId = master.GetProperty("id").GetString()!;
 

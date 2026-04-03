@@ -1,5 +1,6 @@
 import { Calendar, Clock, MapPin, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import type { MasterServiceDto } from '@/types';
 
 interface BookingSummaryProps {
@@ -23,6 +24,7 @@ export function BookingSummary({
   totalPrice,
   totalDuration,
 }: BookingSummaryProps) {
+  const { t } = useTranslation();
   const dateLabel = format(new Date(selectedDate), 'EEEE, MMM d, yyyy');
 
   return (
@@ -53,7 +55,7 @@ export function BookingSummary({
       </div>
 
       <div className="p-4 space-y-2">
-        <p className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">Services</p>
+        <p className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">{t('components.bookingSummary.services')}</p>
         {selectedServices.map(s => (
           <div key={s.id} className="flex items-center justify-between text-sm">
             <span className="text-[var(--color-text)]">{s.serviceName}</span>
@@ -64,7 +66,7 @@ export function BookingSummary({
 
       <div className="p-4 flex items-center justify-between">
         <div>
-          <p className="text-xs text-[var(--color-text-secondary)]">{totalDuration} min total</p>
+          <p className="text-xs text-[var(--color-text-secondary)]">{t('components.bookingSummary.minTotal', { duration: totalDuration })}</p>
           <p className="font-semibold text-lg text-[var(--color-primary)]">{totalPrice.toLocaleString()} ₾</p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { format, addDays, startOfDay } from 'date-fns';
 import { getSalon } from '@/api/salons';
 import { getMaster } from '@/api/masters';
@@ -10,6 +11,7 @@ import { Header } from '@/components/Header';
 import { TimeSlotGrid } from '@/components/booking/TimeSlotGrid';
 import { BookingSummary } from '@/components/booking/BookingSummary';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { FormField } from '@/components/ui/FormField';
 import { Loader } from '@/components/ui/Loader';
 import { useBooking } from '@/contexts/BookingContext';
@@ -21,6 +23,7 @@ import type { TimeSlotDto } from '@/types';
 type Step = 'datetime' | 'details' | 'review';
 
 export default function BookingFlowPage() {
+  const { t } = useTranslation();
   const { masterId } = useParams<{ masterId: string }>();
   const salonId = useSalonId();
   const navigate = useNavigate();
@@ -71,15 +74,15 @@ export default function BookingFlowPage() {
       booking.reset();
       navigate(`/booking/confirmation/${created.id}`);
     },
-    onError: () => toast.error('Failed to create booking. Please try again.'),
+    onError: () => toast.error(t('booking.failedToCreate')),
   });
 
   if (booking.selectedServices.length === 0) {
     return (
-      <div className="min-h-screen bg-[var(--color-background)]">
-        <Header title="Book Appointment" showBack />
+      <div className="min-h-screen bg-[var(--color-bg)]">
+        <Header title={t('booking.bookAppointment')} showBack />
         <div className="p-6 text-center text-[var(--color-text-secondary)]">
-          No services selected. Please go back and select services.
+          {t('booking.noServicesSelected')}
         </div>
       </div>
     );
@@ -97,15 +100,15 @@ export default function BookingFlowPage() {
     : (slots ?? []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)]">
-      <Header title="Book Appointment" showBack />
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <Header title={t('booking.bookAppointment')} showBack />
 
       {/* Master quick info */}
       {master && (
         <div className="max-w-md mx-auto px-4 pt-4">
           <div
             className="bg-[var(--color-surface)] p-3 border border-[var(--color-border)] flex items-center gap-3 mb-4"
-            style={{ borderRadius: 'var(--border-radius)' }}
+            style={{ borderRadius: 'var(--radius-lg)' }}
           >
             <div className="flex-1">
               <p className="font-semibold text-sm text-[var(--color-text)]">{master.firstName} {master.lastName}</p>
@@ -125,20 +128,17 @@ export default function BookingFlowPage() {
         {step === 'datetime' && (
           <>
             <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">Select Date</h2>
-              <input
-                type="date"
+              <DatePicker
+                label={t('booking.selectDate')}
                 value={selectedDate}
                 min={minDate}
                 max={maxDate}
-                onChange={e => handleDateChange(e.target.value)}
-                className="w-full p-3 border border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)] focus:outline-none focus:border-[var(--color-primary)]"
-                style={{ borderRadius: 'var(--border-radius)' }}
+                onChange={handleDateChange}
               />
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">Select Time</h2>
+              <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">{t('booking.selectTime')}</h2>
               {loadingSlots ? (
                 <Loader />
               ) : (
@@ -156,7 +156,7 @@ export default function BookingFlowPage() {
               disabled={!selectedSlot}
               onClick={() => setStep('details')}
             >
-              Continue
+              {t('booking.continue')}
             </Button>
           </>
         )}
@@ -164,25 +164,25 @@ export default function BookingFlowPage() {
         {/* STEP 2: Client Details */}
         {step === 'details' && (
           <>
-            <h2 className="text-lg font-semibold text-[var(--color-text)]">Your Details</h2>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">{t('booking.yourDetails')}</h2>
             <div
               className="bg-[var(--color-surface)] border border-[var(--color-border)] p-4 space-y-4"
-              style={{ borderRadius: 'var(--border-radius)' }}
+              style={{ borderRadius: 'var(--radius-lg)' }}
             >
-              <FormField label="Full Name *" value={clientName} onChange={setClientName} placeholder="Your name" variant="client" />
-              <FormField label="Phone *" value={clientPhone} onChange={setClientPhone} placeholder="+7 000 000 00 00" type="tel" variant="client" />
-              <FormField label="Email (optional)" value={clientEmail} onChange={setClientEmail} placeholder="your@email.com" type="email" variant="client" />
+              <FormField label={t('booking.fullName')} value={clientName} onChange={setClientName} placeholder={t('booking.namePlaceholder')} />
+              <FormField label={t('booking.phone')} value={clientPhone} onChange={setClientPhone} placeholder={t('booking.phonePlaceholder')} type="tel" />
+              <FormField label={t('booking.emailOptional')} value={clientEmail} onChange={setClientEmail} placeholder={t('booking.emailPlaceholder')} type="email" />
             </div>
 
             <div className="flex gap-3">
-              <Button variant="secondary" size="lg" onClick={() => setStep('datetime')} className="flex-1">Back</Button>
+              <Button variant="secondary" size="lg" onClick={() => setStep('datetime')} className="flex-1">{t('booking.back')}</Button>
               <Button
                 size="lg"
                 disabled={!clientName || !clientPhone}
                 onClick={() => setStep('review')}
                 className="flex-1"
               >
-                Review
+                {t('booking.review')}
               </Button>
             </div>
           </>
@@ -191,7 +191,7 @@ export default function BookingFlowPage() {
         {/* STEP 3: Review & Confirm */}
         {step === 'review' && selectedSlot && (
           <>
-            <h2 className="text-lg font-semibold text-[var(--color-text)]">Review Booking</h2>
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">{t('booking.reviewBooking')}</h2>
 
             <BookingSummary
               salonName={salon?.name ?? ''}
@@ -206,7 +206,7 @@ export default function BookingFlowPage() {
 
             <div
               className="bg-[var(--color-surface)] border border-[var(--color-border)] p-4 space-y-2"
-              style={{ borderRadius: 'var(--border-radius)' }}
+              style={{ borderRadius: 'var(--radius-lg)' }}
             >
               <p className="text-sm font-medium text-[var(--color-text)]">{clientName}</p>
               <p className="text-sm text-[var(--color-text-secondary)]">{clientPhone}</p>
@@ -214,14 +214,14 @@ export default function BookingFlowPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button variant="secondary" size="lg" onClick={() => setStep('details')} className="flex-1">Back</Button>
+              <Button variant="secondary" size="lg" onClick={() => setStep('details')} className="flex-1">{t('booking.back')}</Button>
               <Button
                 size="lg"
                 loading={mutation.isPending}
                 onClick={() => mutation.mutate()}
                 className="flex-1"
               >
-                Confirm Booking
+                {t('booking.confirmBooking')}
               </Button>
             </div>
           </>

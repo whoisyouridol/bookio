@@ -24,7 +24,7 @@ function SubdomainRoot() {
     <ThemeProvider>
       <BookingProvider>
         <SalonSubdomainProvider>
-          <div className="min-h-screen bg-[var(--color-background)] pb-16" style={{ fontFamily: 'var(--font-family)' }}>
+          <div className="min-h-screen bg-[var(--color-bg)] pb-16" style={{ fontFamily: 'var(--font-family)' }}>
             <Outlet />
             <BottomNav />
           </div>

@@ -7,6 +7,7 @@ import {
   loginWithGoogleAccessToken as apiLoginWithGoogleAccessToken,
   loginWithFacebook as apiLoginWithFacebook,
   refreshSession,
+  reissueSession,
   logout as apiLogout,
 } from '@/api/auth';
 import type { UserDto, RegisterRequest, AuthResponse } from '@/types';
@@ -30,7 +31,7 @@ export interface AuthContextValue {
   masterId: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<UserDto>;
+  login: (identifier: string, password: string) => Promise<UserDto>;
   register: (data: RegisterRequest) => Promise<UserDto>;
   loginWithGoogle: (credential: string) => Promise<UserDto>;
   loginWithGoogleAccessToken: (accessToken: string) => Promise<UserDto>;
@@ -51,14 +52,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshSession()
-      .then(applyAuth)
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    // After Google OAuth redirect, the access token is passed in the URL hash
+    // (#_at=...) so subdomains can authenticate without relying on cross-origin cookie propagation.
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const at = hash.get('_at');
+
+    if (at) {
+      // Clean the token from the URL immediately
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      // Store the access token so the reissue call is authenticated
+      setAccessToken(at);
+      // Exchange for a fresh session: backend sets refresh cookie scoped to this origin
+      reissueSession()
+        .then(applyAuth)
+        .catch(() => setIsLoading(false))
+        .finally(() => setIsLoading(false));
+    } else {
+      refreshSession()
+        .then(applyAuth)
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
+    }
   }, [applyAuth]);
 
-  const login = async (email: string, password: string) =>
-    applyAuth(await apiLogin({ email, password }));
+  const login = async (identifier: string, password: string) =>
+    applyAuth(await apiLogin({ identifier, password }));
 
   const register = async (data: RegisterRequest) =>
     applyAuth(await apiRegister(data));

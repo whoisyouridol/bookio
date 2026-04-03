@@ -9,9 +9,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import type { ServiceDto } from '@/types';
 
 export default function ServicesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: services, isLoading } = useQuery({ queryKey: ['services'], queryFn: getServices, refetchOnMount: 'always' });
 
@@ -32,43 +34,43 @@ export default function ServicesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       setModal(false);
-      toast.success(editing ? 'Service updated.' : 'Service created.');
+      toast.success(editing ? t('admin.services.serviceUpdated') : t('admin.services.serviceCreated'));
     },
-    onError: () => toast.error('Failed to save.'),
+    onError: () => toast.error(t('admin.services.failedToSave')),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteService,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['services'] }); toast.success('Service deleted.'); },
-    onError: () => toast.error('Failed to delete.'),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['services'] }); toast.success(t('admin.services.serviceDeleted')); },
+    onError: () => toast.error(t('admin.services.failedToDelete')),
   });
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Service Catalog</h1>
-        <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> New Service</Button>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">{t('admin.services.serviceCatalog')}</h1>
+        <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> {t('admin.services.newService')}</Button>
       </div>
 
       {isLoading ? <Loader /> : !services?.length ? (
-        <EmptyState icon={Scissors} title="No services yet" action={
-          <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Add first</Button>
+        <EmptyState icon={Scissors} title={t('admin.services.noServicesYet')} action={
+          <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />{t('admin.services.addFirst')}</Button>
         } />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {services.map(s => (
-            <div key={s.id} className="bg-white rounded-xl border border-gray-200 flex items-center gap-3 p-4">
-              <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+            <div key={s.id} className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] flex items-center gap-3 p-4">
+              <div className="w-14 h-14 rounded-lg overflow-hidden bg-[var(--color-bg-subtle)] shrink-0">
                 <ImageWithFallback src={s.photo} alt={s.name} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate">{s.name}</p>
-                {s.description && <p className="text-sm text-gray-500 line-clamp-1">{s.description}</p>}
+                <p className="font-medium text-[var(--color-text)] truncate">{s.name}</p>
+                {s.description && <p className="text-sm text-[var(--color-text-secondary)] line-clamp-1">{s.description}</p>}
               </div>
               <div className="flex gap-1 shrink-0">
                 <Button variant="ghost" size="sm" onClick={() => openEdit(s)}><Edit2 className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="sm" onClick={() => { if (confirm(`Delete "${s.name}"?`)) deleteMutation.mutate(s.id); }}>
-                  <Trash2 className="w-4 h-4 text-red-400" />
+                <Button variant="ghost" size="sm" onClick={() => { if (confirm(t('admin.services.deleteConfirm', { name: s.name }))) deleteMutation.mutate(s.id); }}>
+                  <Trash2 className="w-4 h-4 text-[var(--color-error)]" />
                 </Button>
               </div>
             </div>
@@ -76,25 +78,25 @@ export default function ServicesPage() {
         </div>
       )}
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Edit Service' : 'New Service'}>
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? t('admin.services.editService') : t('admin.services.newService')}>
         <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('admin.services.name')}</label>
             <input value={name} onChange={e => setName(e.target.value)} required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('admin.services.description')}</label>
             <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none" />
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t('admin.services.photo')}</label>
             <DragDropUpload folder="services" accept="image" maxFiles={1} values={photoKeys} onChange={setPhotoKeys} />
           </div>
           <div className="flex gap-3 pt-1">
-            <Button type="button" variant="secondary" onClick={() => setModal(false)} className="flex-1">Cancel</Button>
-            <Button type="submit" loading={saveMutation.isPending} className="flex-1">Save</Button>
+            <Button type="button" variant="secondary" onClick={() => setModal(false)} className="flex-1">{t('admin.services.cancel')}</Button>
+            <Button type="submit" loading={saveMutation.isPending} className="flex-1">{t('admin.services.save')}</Button>
           </div>
         </form>
       </Modal>

@@ -22,15 +22,20 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center font-medium transition-all rounded-[var(--border-radius)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center font-semibold transition-all focus:outline-none focus-visible:ring-3 focus-visible:ring-[var(--color-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed',
+        'rounded-[var(--radius-md)]',
+        'font-[var(--font-body)]',
         {
-          'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] active:scale-95':
+          'bg-[var(--color-primary)] text-[var(--color-primary-text)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary-active)] active:scale-[0.97]':
             variant === 'primary',
-          'bg-gray-100 text-[var(--color-text)] hover:bg-gray-200': variant === 'secondary',
-          'border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-purple-50':
+          'bg-[var(--color-bg-subtle)] text-[var(--color-text)] hover:bg-[var(--color-border)]':
+            variant === 'secondary',
+          'border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-subtle)]':
             variant === 'outline',
-          'text-[var(--color-text-secondary)] hover:bg-gray-100': variant === 'ghost',
-          'bg-red-500 text-white hover:bg-red-600': variant === 'danger',
+          'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text)]':
+            variant === 'ghost',
+          'bg-[var(--color-error)] text-white hover:bg-[var(--color-error-text)]':
+            variant === 'danger',
           'px-3 py-1.5 text-sm': size === 'sm',
           'px-4 py-2.5 text-base': size === 'md',
           'px-6 py-3 text-base': size === 'lg',

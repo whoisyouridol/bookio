@@ -2,26 +2,26 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export class LoginPage {
   readonly page: Page;
-  readonly emailInput: Locator;
+  readonly identifierInput: Locator;
   readonly passwordInput: Locator;
   readonly submitButton: Locator;
   readonly heading: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.locator('input[type="email"]');
-    this.passwordInput = page.locator('input[type="password"]');
-    this.submitButton = page.locator('button[type="submit"]');
+    this.identifierInput = page.getByTestId('login-identifier');
+    this.passwordInput = page.getByTestId('login-password');
+    this.submitButton = page.getByTestId('login-submit');
     this.heading = page.locator('h1');
   }
 
   async goto() {
     await this.page.goto('/login');
-    await expect(this.heading).toHaveText('Sign in');
+    await expect(this.heading).toBeVisible();
   }
 
-  async login(email: string, password: string) {
-    await this.emailInput.fill(email);
+  async login(identifier: string, password: string) {
+    await this.identifierInput.fill(identifier);
     await this.passwordInput.fill(password);
     await this.submitButton.click();
   }

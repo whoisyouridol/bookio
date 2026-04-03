@@ -1,35 +1,257 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — BookVisit Design System
+   Fonts: Fraunces (headings) + Outfit (body)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* Default theme — purple */
-  --color-primary: #8B5CF6;
-  --color-primary-dark: #7C3AED;
-  --color-primary-light: #A78BFA;
-  --color-accent: #EC4899;
-  --color-background: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-text: #1F2937;
-  --color-text-secondary: #6B7280;
-  --color-border: #E5E7EB;
-  --color-success: #22C55E;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
-  --font-family: "Inter", system-ui, sans-serif;
-  --border-radius: 12px;
+  /* ── Typography ─────────────────────────────────────────────────────────── */
+  --font-heading: 'Fraunces', 'Georgia', serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+
+  /* ── Radii ──────────────────────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+  --border-radius: 10px;
+
+  /* ── Shadows ────────────────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(26, 22, 20, 0.04);
+  --shadow-sm: 0 2px 8px rgba(26, 22, 20, 0.06);
+  --shadow-md: 0 4px 16px rgba(26, 22, 20, 0.08);
+  --shadow-lg: 0 8px 32px rgba(26, 22, 20, 0.10);
+  --shadow-xl: 0 16px 48px rgba(26, 22, 20, 0.14);
+
+  /* ── Transition ─────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* ── Spacing (exposed as CSS vars for components) ───────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
 }
+
+/* ── Light theme (default) ───────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --color-bg: #FAF8F5;
+  --color-bg-subtle: #F3EFE9;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #FFFFFF;
+
+  --color-text: #1A1614;
+  --color-text-secondary: #6E6259;
+  --color-text-tertiary: #A69B90;
+  --color-text-inverse: #FAF8F5;
+
+  --color-border: #E8E2DA;
+  --color-border-strong: #D1C8BD;
+  --color-divider: #F0EBE4;
+
+  --color-primary: #B8623A;
+  --color-primary-hover: #9E5230;
+  --color-primary-active: #874626;
+  --color-primary-subtle: #FBF0E8;
+  --color-primary-text: #FFFFFF;
+  --color-primary-dark: #9E5230;
+  --color-primary-light: #FBF0E8;
+
+  --color-accent: #2D6A5A;
+  --color-accent-hover: #245748;
+  --color-accent-subtle: #E8F3EF;
+
+  --color-success: #3B8C6E;
+  --color-success-subtle: #E6F5EE;
+  --color-success-text: #1B5E46;
+
+  --color-warning: #C4862E;
+  --color-warning-subtle: #FDF3E4;
+  --color-warning-text: #7A5218;
+
+  --color-error: #C44B3F;
+  --color-error-subtle: #FDEDED;
+  --color-error-text: #8B2E25;
+
+  --color-info: #4A7FB5;
+  --color-info-subtle: #EBF2FA;
+  --color-info-text: #2B5A8A;
+
+  --color-selection: var(--color-primary-subtle);
+  --color-selection-border: var(--color-primary);
+  --color-hover: rgba(26, 22, 20, 0.03);
+  --color-active: rgba(26, 22, 20, 0.06);
+
+  --color-skeleton: #EDE8E1;
+  --color-skeleton-shine: #F7F4EF;
+
+  --shadow-ring-focus: 0 0 0 3px rgba(184, 98, 58, 0.2);
+
+  /* Legacy aliases for backward compatibility */
+  --color-background: var(--color-bg);
+  --font-family: var(--font-body);
+}
+
+/* ── Dark theme ──────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg: #111010;
+  --color-bg-subtle: #1A1816;
+  --color-surface: #1E1C19;
+  --color-surface-raised: #262320;
+
+  --color-text: #EDEBE7;
+  --color-text-secondary: #A69B90;
+  --color-text-tertiary: #6E6259;
+  --color-text-inverse: #1A1614;
+
+  --color-border: #332E28;
+  --color-border-strong: #4A433B;
+  --color-divider: #262220;
+
+  --color-primary: #D88B5A;
+  --color-primary-hover: #E49E6E;
+  --color-primary-active: #C47A4C;
+  --color-primary-subtle: #2A1E14;
+  --color-primary-text: #111010;
+  --color-primary-dark: #C47A4C;
+  --color-primary-light: #2A1E14;
+
+  --color-accent: #4DB89A;
+  --color-accent-hover: #5DCCAB;
+  --color-accent-subtle: #14241E;
+
+  --color-success: #4DB89A;
+  --color-success-subtle: #14241E;
+  --color-success-text: #8EDED0;
+
+  --color-warning: #DBAA55;
+  --color-warning-subtle: #2A2010;
+  --color-warning-text: #E8C070;
+
+  --color-error: #E07068;
+  --color-error-subtle: #2A1414;
+  --color-error-text: #F0908A;
+
+  --color-info: #6AA0D0;
+  --color-info-subtle: #14202A;
+  --color-info-text: #90BFE0;
+
+  --color-selection: var(--color-primary-subtle);
+  --color-selection-border: var(--color-primary);
+  --color-hover: rgba(255, 255, 255, 0.04);
+  --color-active: rgba(255, 255, 255, 0.07);
+
+  --color-skeleton: #262220;
+  --color-skeleton-shine: #332E28;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-ring-focus: 0 0 0 3px rgba(216, 139, 90, 0.3);
+
+  /* Legacy aliases */
+  --color-background: var(--color-bg);
+  --font-family: var(--font-body);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BASE STYLES
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 @layer base {
   * {
     box-sizing: border-box;
   }
 
-  body {
-    background-color: var(--color-background);
-    color: var(--color-text);
-    font-family: var(--font-family);
+  html {
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
   }
 
-  h1 { font-size: 1.5rem; font-weight: 600; line-height: 1.4; }
-  h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.4; }
-  h3 { font-size: 1.125rem; font-weight: 500; line-height: 1.4; }
-  h4 { font-size: 1rem; font-weight: 500; line-height: 1.4; }
+  /* Light mode: tell the browser to use light-scheme for native controls */
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  /* Dark mode: tell the browser to use dark-scheme for native controls */
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    transition: background-color var(--duration-slow) var(--ease-out),
+                color var(--duration-slow) var(--ease-out);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  h1 { font-size: var(--text-2xl); }
+  h2 { font-size: var(--text-xl); }
+  h3 { font-size: var(--text-lg); }
+  h4 { font-size: var(--text-base); font-weight: 500; }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-text);
+  }
+
+  /* ── Native date/time input styling ────────────────────────────────────── */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    font-family: var(--font-body);
+    color: var(--color-text);
+    background: var(--color-surface);
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    opacity: 0.6;
+    transition: opacity 150ms;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* Dark mode: invert the calendar icon so it's visible */
+  [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+  [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator,
+  [data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+  }
 }

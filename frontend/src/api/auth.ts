@@ -31,6 +31,11 @@ export async function refreshSession(): Promise<AuthResponse> {
   return res;
 }
 
+export async function reissueSession(): Promise<AuthResponse> {
+  const { data: res } = await apiClient.post<AuthResponse>('/auth/reissue');
+  return res;
+}
+
 export async function logout(): Promise<void> {
   await apiClient.post('/auth/logout');
 }
@@ -44,8 +49,8 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await apiClient.post('/auth/change-password', { currentPassword, newPassword });
 }
 
-export async function forgotPassword(email: string): Promise<void> {
-  await apiClient.post('/auth/forgot-password', { email });
+export async function forgotPassword(identifier: string): Promise<void> {
+  await apiClient.post('/auth/forgot-password', { identifier });
 }
 
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<void> {
@@ -53,7 +58,7 @@ export async function resetPassword(email: string, token: string, newPassword: s
 }
 
 export async function registerMaster(data: {
-  email: string; password: string; firstName: string; lastName: string; phone?: string; salonId: string;
+  email?: string; password: string; firstName: string; lastName: string; phone?: string; salonId: string;
 }): Promise<{ message: string }> {
   const { data: res } = await apiClient.post<{ message: string }>('/auth/master/register', data);
   return res;
@@ -71,6 +76,36 @@ export async function registerMasterWithGoogleAccessToken(accessToken: string, s
 
 export async function registerMasterWithFacebook(accessToken: string, salonId: string): Promise<{ message: string }> {
   const { data } = await apiClient.post<{ message: string }>('/auth/master/facebook', { accessToken, salonId });
+  return data;
+}
+
+export async function registerSalonAdmin(data: {
+  email?: string; password: string; firstName: string; lastName: string; phone?: string; salonId: string;
+}): Promise<{ message: string }> {
+  const { data: res } = await apiClient.post<{ message: string }>('/auth/salon-admin/register', data);
+  return res;
+}
+
+export async function registerSalonAdminWithNewSalon(data: {
+  email?: string; password: string; firstName: string; lastName: string; phone?: string;
+  salonName: string; salonAddress: string; workingHoursStart: string; workingHoursEnd: string; workingDays: string[];
+}): Promise<{ message: string }> {
+  const { data: res } = await apiClient.post<{ message: string }>('/auth/salon-admin/register-with-salon', data);
+  return res;
+}
+
+export async function registerSalonAdminWithGoogle(credential: string, salonId: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>('/auth/salon-admin/google', { credential, salonId });
+  return data;
+}
+
+export async function registerSalonAdminWithGoogleAccessToken(accessToken: string, salonId: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>('/auth/salon-admin/google', { accessToken, salonId });
+  return data;
+}
+
+export async function registerSalonAdminWithFacebook(accessToken: string, salonId: string): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>('/auth/salon-admin/facebook', { accessToken, salonId });
   return data;
 }
 

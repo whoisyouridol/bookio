@@ -5,8 +5,8 @@ interface FormFieldProps {
   type?: string;
   required?: boolean;
   placeholder?: string;
-  /** 'admin' uses gray/purple styling, 'client' uses CSS variable theming */
-  variant?: 'admin' | 'client';
+  error?: string;
+  disabled?: boolean;
 }
 
 export function FormField({
@@ -16,17 +16,12 @@ export function FormField({
   type = 'text',
   required = false,
   placeholder,
-  variant = 'admin',
+  error,
+  disabled = false,
 }: FormFieldProps) {
-  const isClient = variant === 'client';
-
   return (
     <div>
-      <label
-        className={`block text-sm font-medium mb-1.5 ${
-          isClient ? 'text-[var(--color-text)]' : 'text-gray-700'
-        }`}
-      >
+      <label className="block text-sm font-medium mb-1.5 text-[var(--color-text)]">
         {label}
       </label>
       <input
@@ -35,13 +30,16 @@ export function FormField({
         onChange={e => onChange(e.target.value)}
         required={required}
         placeholder={placeholder}
-        className={
-          isClient
-            ? 'w-full p-3 border border-[var(--color-border)] text-[var(--color-text)] placeholder-gray-400 focus:outline-none focus:border-[var(--color-primary)] bg-[var(--color-surface)]'
-            : 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-purple-500'
-        }
-        style={isClient ? { borderRadius: 'var(--border-radius)' } : undefined}
+        disabled={disabled}
+        className={`w-full px-3 py-2.5 text-sm rounded-[var(--radius-md)] border bg-[var(--color-surface)] text-[var(--color-text)] placeholder-[var(--color-text-tertiary)] transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed ${
+          error
+            ? 'border-[var(--color-error)]'
+            : 'border-[var(--color-border)]'
+        }`}
       />
+      {error && (
+        <p className="mt-1 text-xs text-[var(--color-error)]">{error}</p>
+      )}
     </div>
   );
 }

@@ -6,6 +6,9 @@ using BeautySalonBooking.Infrastructure;
 using BeautySalonBooking.Infrastructure.Entities;
 using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Infrastructure.Persistence.Seed;
+using BeautySalonBooking.Infrastructure.Services;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -80,6 +83,15 @@ builder.Services.AddMemoryCache();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// ── Hangfire ─────────────────────────────────────────────────────────────
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(
+        builder.Configuration.GetConnectionString("DefaultConnection"))));
+builder.Services.AddHangfireServer();
+
 var app = builder.Build();
 
 // Migrate DB and seed
@@ -92,7 +104,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         db.Database.Migrate();
-        await DataSeeder.SeedAsync(db, userManager, config, logger);
+        await DataSeeder.SeedSuperAdminsAndLinkMastersAsync(db, userManager, config, logger);
     }
     catch (Exception ex)
     {
@@ -125,6 +137,17 @@ app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Beauty Salo
 app.UseAuthentication();
 app.UseAuthorization();
 
+// ── Hangfire dashboard ───────────────────────────────────────────────────
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new AllowAllDashboardAuthorizationFilter() }
+});
+
+RecurringJob.AddOrUpdate<ReminderSchedulerJob>(
+    "reminder-scanner",
+    job => job.ScanAndScheduleMissingRemindersAsync(),
+    "*/15 * * * *");
+
 app.UseHttpsRedirection();
 app.MapGet("/health", () => Results.Ok("healthy"));
 app.MapControllers();
@@ -132,3 +155,8 @@ app.MapControllers();
 app.Run();
 
 public partial class Program { }
+
+public class AllowAllDashboardAuthorizationFilter : Hangfire.Dashboard.IDashboardAuthorizationFilter
+{
+    public bool Authorize(Hangfire.Dashboard.DashboardContext context) => true;
+}

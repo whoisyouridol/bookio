@@ -1,4 +1,6 @@
 using BeautySalonBooking.Infrastructure.Persistence;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -24,6 +26,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         builder.UseSetting("Jwt:Issuer", "TestIssuer");
         builder.UseSetting("Jwt:Audience", "TestAudience");
 
+        // Provide connection string for Hangfire (uses same test container as EF Core)
+        builder.UseSetting("ConnectionStrings:DefaultConnection", _postgres.GetConnectionString());
+
         builder.ConfigureServices(services =>
         {
             // Replace real DbContext with test container
@@ -33,6 +38,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(_postgres.GetConnectionString()));
+
+            // Replace Hangfire storage with test container connection
+            services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(_postgres.GetConnectionString())));
 
             // Register the test auth handler
             services.AddAuthentication()

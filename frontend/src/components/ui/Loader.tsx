@@ -8,7 +8,7 @@ export function Loader({ className = '' }: { className?: string }) {
 
 export function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
       <Loader />
     </div>
   );

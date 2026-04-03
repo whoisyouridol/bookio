@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ShieldCheck, ShieldOff, User, Scissors, Info, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
-import { getAdminUser, updateUserProfile, setUserActive, updateUserRole } from '@/api/auth';
+import { getAdminUser, updateUserProfile, setUserActive } from '@/api/auth';
 import { getMaster, getMasterServices, updateMaster, addMasterService, updateMasterService, removeMasterService } from '@/api/masters';
 import { getServices } from '@/api/services';
-import { getSalons } from '@/api/salons';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
@@ -18,15 +18,8 @@ import type { MasterServiceDto } from '@/types';
 
 type Tab = 'account' | 'master';
 
-const ROLES = ['Client', 'Master', 'SalonAdmin', 'SuperAdmin'];
-const ROLE_LABELS: Record<string, string> = {
-  SuperAdmin: 'Super Admin',
-  SalonAdmin: 'Salon Admin',
-  Master: 'Master',
-  Client: 'Client',
-};
-
 export default function UserDetailPage() {
+  const { t } = useTranslation();
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -59,29 +52,17 @@ export default function UserDetailPage() {
     enabled: tab === 'master',
   });
 
-  const { data: salons = [] } = useQuery({
-    queryKey: ['salons-public'],
-    queryFn: getSalons,
-  });
-
   // ── Account form state ─────────────────────────────────────────────────────
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('');
-  const [salonId, setSalonId] = useState('');
-  const [masterId, setMasterId] = useState('');
-
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName ?? '');
       setLastName(user.lastName ?? '');
       setPhone(user.phone ?? '');
-      setEmail(user.email);
-      setRole(user.role);
-      setSalonId(user.salonId ?? '');
-      setMasterId(user.masterId ?? '');
+      setEmail(user.email ?? '');
     }
   }, [user]);
 
@@ -131,17 +112,7 @@ export default function UserDetailPage() {
     onSuccess: updated => {
       queryClient.setQueryData(['admin-user', userId], updated);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast.success('Profile updated');
-    },
-    onError: err => toast.error(getErrorMessage(err)),
-  });
-
-  const updateRoleMutation = useMutation({
-    mutationFn: () => updateUserRole(userId!, { role, salonId: salonId || undefined, masterId: masterId || undefined }),
-    onSuccess: updated => {
-      queryClient.setQueryData(['admin-user', userId], updated);
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast.success('Role updated');
+      toast.success(t('admin.userDetail.profileUpdated'));
     },
     onError: err => toast.error(getErrorMessage(err)),
   });
@@ -151,7 +122,7 @@ export default function UserDetailPage() {
     onSuccess: updated => {
       queryClient.setQueryData(['admin-user', userId], updated);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast.success(updated.isActive ? 'User activated' : 'User deactivated');
+      toast.success(updated.isActive ? t('admin.userDetail.userActivated') : t('admin.userDetail.userDeactivated'));
     },
     onError: err => toast.error(getErrorMessage(err)),
   });
@@ -165,7 +136,7 @@ export default function UserDetailPage() {
     }),
     onSuccess: updated => {
       queryClient.setQueryData(['master', user?.masterId], updated);
-      toast.success('Master profile updated');
+      toast.success(t('admin.userDetail.masterProfileUpdated'));
     },
     onError: err => toast.error(getErrorMessage(err)),
   });
@@ -181,7 +152,7 @@ export default function UserDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['masterServices', user?.masterId] });
       setAddServiceId(''); setAddPrice(''); setAddDuration(''); setAddPhotoKeys([]); setAddSvcDesc('');
-      toast.success('Service added');
+      toast.success(t('admin.userDetail.serviceAdded'));
     },
     onError: err => toast.error(getErrorMessage(err)),
   });
@@ -197,7 +168,7 @@ export default function UserDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['masterServices', user?.masterId] });
       closeEditService();
-      toast.success('Service updated');
+      toast.success(t('admin.userDetail.serviceUpdated'));
     },
     onError: err => toast.error(getErrorMessage(err)),
   });
@@ -206,33 +177,33 @@ export default function UserDetailPage() {
     mutationFn: (serviceId: string) => removeMasterService(user!.masterId!, serviceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['masterServices', user?.masterId] });
-      toast.success('Service removed');
+      toast.success(t('admin.userDetail.serviceRemoved'));
     },
   });
 
   if (isLoading) return <Loader />;
-  if (!user) return <div className="p-6 text-gray-500">Account not found.</div>;
+  if (!user) return <div className="p-6 text-[var(--color-text-secondary)]">{t('admin.userDetail.accountNotFound')}</div>;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/admin/users')} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
+        <button onClick={() => navigate('/admin/users')} className="p-1.5 hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors">
+          <ArrowLeft className="w-5 h-5 text-[var(--color-text-secondary)]" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900 truncate">
-            {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : user.email}
+          <h1 className="text-xl font-bold text-[var(--color-text)] truncate">
+            {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : (user.email ?? user.phone ?? '\u2014')}
           </h1>
-          <p className="text-sm text-gray-400">{user.email}</p>
+          <p className="text-sm text-[var(--color-text-tertiary)]">{user.email ?? user.phone ?? '\u2014'}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={user.isActive ? 'success' : 'warning'}>{user.isActive ? 'Active' : 'Pending'}</Badge>
+          <Badge variant={user.isActive ? 'success' : 'warning'}>{user.isActive ? t('admin.users.active') : t('admin.users.pending')}</Badge>
           <button
             onClick={() => activateMutation.mutate(!user.isActive)}
             disabled={activateMutation.isPending}
-            title={user.isActive ? 'Deactivate' : 'Activate'}
-            className={`p-2 rounded-lg transition-colors ${user.isActive ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-100'}`}
+            title={user.isActive ? t('admin.userDetail.deactivate') : t('admin.userDetail.activate')}
+            className={`p-2 rounded-lg transition-colors ${user.isActive ? 'text-[var(--color-success)] hover:bg-[var(--color-success-subtle)]' : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-subtle)]'}`}
           >
             {user.isActive ? <ShieldCheck className="w-5 h-5" /> : <ShieldOff className="w-5 h-5" />}
           </button>
@@ -240,23 +211,23 @@ export default function UserDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-[var(--color-border)] mb-6">
         <button
           onClick={() => setTab('account')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'account' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            tab === 'account' ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
           }`}
         >
-          <User className="w-4 h-4" /> Account
+          <User className="w-4 h-4" /> {t('admin.userDetail.accountTab')}
         </button>
         {hasMaster && (
           <button
             onClick={() => setTab('master')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === 'master' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === 'master' ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
             }`}
           >
-            <Scissors className="w-4 h-4" /> Master Profile
+            <Scissors className="w-4 h-4" /> {t('admin.userDetail.masterProfileTab')}
           </button>
         )}
       </div>
@@ -264,55 +235,27 @@ export default function UserDetailPage() {
       {/* ── Account tab ───────────────────────────────────────────────────────── */}
       {tab === 'account' && (
         <div className="space-y-6">
-          <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Profile</h2>
+          <section className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--color-text)] uppercase tracking-wide">{t('admin.userDetail.profileTab')}</h2>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="First Name" value={firstName} onChange={setFirstName} />
-              <Field label="Last Name" value={lastName} onChange={setLastName} />
+              <Field label={t('admin.userDetail.firstName')} value={firstName} onChange={setFirstName} />
+              <Field label={t('admin.userDetail.lastName')} value={lastName} onChange={setLastName} />
             </div>
-            <Field label="Email" value={email} onChange={setEmail} type="email" />
-            <Field label="Phone" value={phone} onChange={setPhone} type="tel" />
+            <Field label={t('admin.userDetail.email')} value={email} onChange={setEmail} type="email" />
+            <Field label={t('admin.userDetail.phone')} value={phone} onChange={setPhone} type="tel" />
             {user.externalProvider && (
-              <p className="text-xs text-gray-400">
-                Linked via <span className="font-medium">{user.externalProvider}</span> — password login not available
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                {t('admin.userDetail.linkedVia')} <span className="font-medium">{user.externalProvider}</span> {t('admin.userDetail.noPasswordLogin')}
               </p>
             )}
             <Button onClick={() => updateProfileMutation.mutate()} loading={updateProfileMutation.isPending} size="sm">
-              Save Profile
+              {t('admin.userDetail.saveProfile')}
             </Button>
           </section>
 
-          <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Role & Links</h2>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
-              <select value={role} onChange={e => setRole(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Salon</label>
-              <select value={salonId} onChange={e => setSalonId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                <option value="">— None —</option>
-                {salons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Master ID</label>
-              <input type="text" value={masterId} onChange={e => setMasterId(e.target.value)}
-                placeholder="UUID of linked master record"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono" />
-            </div>
-            <Button onClick={() => updateRoleMutation.mutate()} loading={updateRoleMutation.isPending} size="sm" variant="secondary">
-              Save Role & Links
-            </Button>
-          </section>
-
-          <section className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-xs text-gray-400 space-y-1">
-            <p><span className="font-medium text-gray-500">User ID:</span> {user.id}</p>
-            <p><span className="font-medium text-gray-500">Created:</span> {new Date(user.createdAt).toLocaleString()}</p>
+          <section className="bg-[var(--color-bg)] rounded-[var(--radius-lg)] border border-[var(--color-divider)] p-4 text-xs text-[var(--color-text-tertiary)] space-y-1">
+            <p><span className="font-medium text-[var(--color-text-secondary)]">{t('admin.userDetail.userId')}</span> {user.id}</p>
+            <p><span className="font-medium text-[var(--color-text-secondary)]">{t('admin.userDetail.created')}</span> {new Date(user.createdAt).toLocaleString()}</p>
           </section>
         </div>
       )}
@@ -321,100 +264,100 @@ export default function UserDetailPage() {
       {tab === 'master' && hasMaster && (
         <div className="space-y-6">
           {/* Master profile fields */}
-          <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Master Profile</h2>
+          <section className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--color-text)] uppercase tracking-wide">{t('admin.userDetail.masterProfile')}</h2>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Photo</label>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('admin.userDetail.photo')}</label>
               <DragDropUpload folder="masters" accept="image" maxFiles={1} values={masterPhotoKeys} onChange={setMasterPhotoKeys} />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('admin.userDetail.description')}</label>
               <textarea
                 value={masterDescription}
                 onChange={e => setMasterDescription(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none"
               />
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={masterAutoApprove} onChange={e => setMasterAutoApprove(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                className="mt-0.5 w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
               <span>
-                <span className="text-sm font-medium text-gray-700">Auto-approve bookings</span>
-                <span className="block text-xs text-gray-500 mt-0.5">
-                  {masterAutoApprove ? 'New bookings are confirmed automatically.' : 'New bookings require manual approval.'}
+                <span className="text-sm font-medium text-[var(--color-text)]">{t('admin.userDetail.autoApprove')}</span>
+                <span className="block text-xs text-[var(--color-text-secondary)] mt-0.5">
+                  {masterAutoApprove ? t('admin.userDetail.autoApproveOn') : t('admin.userDetail.autoApproveOff')}
                 </span>
               </span>
             </label>
 
             <Button onClick={() => updateMasterMutation.mutate()} loading={updateMasterMutation.isPending} size="sm">
-              Save Profile
+              {t('admin.userDetail.saveProfile')}
             </Button>
           </section>
 
           {/* Services */}
-          <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Services</h2>
+          <section className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--color-text)] uppercase tracking-wide">{t('admin.userDetail.services')}</h2>
 
             <div className="space-y-2">
               {masterServices?.filter(s => s.isActive).map(ms => {
                 const effectivePhoto = ms.photo ?? ms.servicePhoto;
                 const isEditing = editingServiceId === ms.serviceId;
                 return (
-                  <div key={ms.id} className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                  <div key={ms.id} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-[var(--color-bg-subtle)] transition-colors"
                       onClick={() => isEditing ? closeEditService() : openEditService(ms)}>
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-[var(--color-bg-subtle)] shrink-0">
                         <img src={resolveMediaUrl(effectivePhoto)} alt={ms.serviceName}
                           className="w-full h-full object-cover"
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">{ms.serviceName}</p>
-                        <p className="text-xs text-gray-500">{ms.durationMinutes} min · {ms.price.toLocaleString()} ₾</p>
+                        <p className="text-sm font-medium text-[var(--color-text)]">{ms.serviceName}</p>
+                        <p className="text-xs text-[var(--color-text-secondary)]">{ms.durationMinutes} min · {ms.price.toLocaleString()} ₾</p>
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); isEditing ? closeEditService() : openEditService(ms); }}>
                           {isEditing ? <X className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); removeServiceMutation.mutate(ms.serviceId); }}>
-                          <Trash2 className="w-4 h-4 text-red-400" />
+                          <Trash2 className="w-4 h-4 text-[var(--color-error)]" />
                         </Button>
                       </div>
                     </div>
 
                     {isEditing && (
-                      <div className="border-t border-gray-100 bg-white p-4 space-y-3">
+                      <div className="border-t border-[var(--color-divider)] bg-[var(--color-surface)] p-4 space-y-3">
                         <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
                           <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                           <div className="flex-1 space-y-2">
-                            <p className="text-xs text-blue-700">Default service photo:</p>
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-blue-200">
+                            <p className="text-xs text-[var(--color-info-text)]">{t('admin.userDetail.defaultPhoto')}</p>
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--color-bg-subtle)] border border-blue-200">
                               <ImageWithFallback src={ms.servicePhoto} alt="default" className="w-full h-full object-cover" />
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium text-gray-600">Custom photo (optional)</p>
+                          <p className="text-xs font-medium text-[var(--color-text-secondary)]">{t('admin.userDetail.customPhotoOptional')}</p>
                           {(editPhotoKeys.length > 0 || (ms.photo && !clearPhoto)) && (
                             <button type="button" onClick={() => { setEditPhotoKeys([]); setClearPhoto(true); }}
-                              className="text-xs text-red-500 hover:text-red-700">Reset to default</button>
+                              className="text-xs text-[var(--color-error)] hover:text-[var(--color-error-text)]">{t('admin.userDetail.resetToDefault')}</button>
                           )}
                         </div>
                         <DragDropUpload folder="master-services" accept="image" maxFiles={1}
                           values={clearPhoto ? [] : editPhotoKeys}
                           onChange={keys => { setEditPhotoKeys(keys); setClearPhoto(keys.length === 0); }} />
                         <textarea value={editSvcDesc} onChange={e => setEditSvcDesc(e.target.value)} maxLength={300} rows={2}
-                          placeholder="Description (optional)"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none" />
+                          placeholder={t('admin.userDetail.descriptionOptional')}
+                          className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none" />
                         <div className="grid grid-cols-3 gap-3">
-                          <input type="number" placeholder="Price ₾" value={editPrice} onChange={e => setEditPrice(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
-                          <input type="number" placeholder="Duration min" value={editDuration} onChange={e => setEditDuration(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
+                          <input type="number" placeholder={t('admin.userDetail.price')} value={editPrice} onChange={e => setEditPrice(e.target.value)}
+                            className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+                          <input type="number" placeholder={t('admin.userDetail.durationMin')} value={editDuration} onChange={e => setEditDuration(e.target.value)}
+                            className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
                           <Button size="sm" disabled={!editPrice || !editDuration} loading={updateServiceMutation.isPending}
                             onClick={() => updateServiceMutation.mutate(ms.serviceId)}>
                             <Check className="w-4 h-4" />
@@ -428,11 +371,11 @@ export default function UserDetailPage() {
             </div>
 
             {/* Add service */}
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium text-gray-700">Add Service</p>
+            <div className="bg-[var(--color-bg)] rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium text-[var(--color-text)]">{t('admin.userDetail.addService')}</p>
               <select value={addServiceId} onChange={e => { setAddServiceId(e.target.value); setAddPhotoKeys([]); }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 bg-white">
-                <option value="">Select service…</option>
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] bg-[var(--color-surface)]">
+                <option value="">{t('admin.userDetail.selectService')}</option>
                 {catalog.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
 
@@ -443,26 +386,26 @@ export default function UserDetailPage() {
                     <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                       <div className="space-y-1">
-                        <p className="text-xs text-blue-700">Default photo:</p>
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-blue-200">
+                        <p className="text-xs text-[var(--color-info-text)]">{t('admin.userDetail.defaultPhoto')}</p>
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--color-bg-subtle)] border border-blue-200">
                           <ImageWithFallback src={defaultPhoto} alt="default" className="w-full h-full object-cover" />
                         </div>
                       </div>
                     </div>
-                    <p className="text-xs font-medium text-gray-600">Custom photo (optional)</p>
+                    <p className="text-xs font-medium text-[var(--color-text-secondary)]">{t('admin.userDetail.customPhotoOptional')}</p>
                     <DragDropUpload folder="master-services" accept="image" maxFiles={1} values={addPhotoKeys} onChange={setAddPhotoKeys} />
                   </div>
                 );
               })()}
 
               <textarea value={addSvcDesc} onChange={e => setAddSvcDesc(e.target.value)} maxLength={300} rows={2}
-                placeholder="Description (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none" />
+                placeholder={t('admin.userDetail.descriptionOptional')}
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none" />
               <div className="grid grid-cols-3 gap-3">
-                <input type="number" placeholder="Price ₾" value={addPrice} onChange={e => setAddPrice(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
-                <input type="number" placeholder="Duration min" value={addDuration} onChange={e => setAddDuration(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-500" />
+                <input type="number" placeholder={t('admin.userDetail.price')} value={addPrice} onChange={e => setAddPrice(e.target.value)}
+                  className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+                <input type="number" placeholder={t('admin.userDetail.durationMin')} value={addDuration} onChange={e => setAddDuration(e.target.value)}
+                  className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
                 <Button size="sm" disabled={!addServiceId || !addPrice || !addDuration} loading={addServiceMutation.isPending}
                   onClick={() => addServiceMutation.mutate()}>
                   <Plus className="w-4 h-4" />
@@ -481,9 +424,9 @@ function Field({ label, value, onChange, type = 'text' }: {
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20" />
     </div>
   );
 }

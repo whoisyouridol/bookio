@@ -6,8 +6,11 @@ import { Toaster } from 'sonner';
 import App from './App';
 import SubdomainApp from './SubdomainApp';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { initFacebookSDK } from './lib/facebook';
 import { isOnSubdomain } from './lib/subdomain';
+import './i18n/i18n';
 import './styles/index.css';
 
 initFacebookSDK();
@@ -44,12 +47,16 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <GoogleOAuthProvider clientId={googleClientId}>
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            {isOnSubdomain() ? <SubdomainApp /> : <App />}
-            <Toaster position="top-center" richColors />
-          </QueryClientProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <QueryClientProvider client={queryClient}>
+                {isOnSubdomain() ? <SubdomainApp /> : <App />}
+                <Toaster position="top-center" richColors />
+              </QueryClientProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </GoogleOAuthProvider>
     </ErrorBoundary>
   </StrictMode>

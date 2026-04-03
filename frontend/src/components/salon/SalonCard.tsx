@@ -11,9 +11,9 @@ export function SalonCard({ salon }: { salon: SalonDto }) {
   return (
     <Link
       to={`/salon/${salon.id}`}
-      className="block bg-[var(--color-surface)] rounded-[var(--border-radius)] overflow-hidden shadow-sm border border-[var(--color-border)] hover:shadow-md transition-shadow"
+      className="block bg-[var(--color-surface)] rounded-[var(--radius-lg)] overflow-hidden shadow-[var(--shadow-sm)] border border-[var(--color-border)] hover:shadow-[var(--shadow-md)] transition-all"
     >
-      <div className="relative h-48 bg-gray-100">
+      <div className="relative h-48 bg-[var(--color-bg-subtle)]">
         <ImageWithFallback
           src={salon.photos[0]}
           alt={salon.name}
@@ -22,7 +22,9 @@ export function SalonCard({ salon }: { salon: SalonDto }) {
       </div>
 
       <div className="p-4">
-        <h3 className="font-semibold text-lg text-[var(--color-text)] mb-2">{salon.name}</h3>
+        <h3 className="font-semibold text-lg text-[var(--color-text)] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+          {salon.name}
+        </h3>
 
         <div className="flex items-start text-sm text-[var(--color-text-secondary)] mb-2 gap-1.5">
           <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />

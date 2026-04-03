@@ -328,6 +328,77 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.ToTable("MasterWeeklySlots");
                 });
 
+            modelBuilder.Entity("BeautySalonBooking.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Body")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("HangfireJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RecipientEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("RecipientPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("Status", "ScheduledAt");
+
+                    b.HasIndex("BookingId", "Type", "Channel")
+                        .IsUnique();
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("BeautySalonBooking.Domain.Entities.Salon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -594,6 +665,10 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasFilter("\"PhoneNumber\" IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -878,6 +953,17 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.Navigation("SalonMaster");
                 });
 
+            modelBuilder.Entity("BeautySalonBooking.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("BeautySalonBooking.Domain.Entities.Booking", "Booking")
+                        .WithMany("Notifications")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
             modelBuilder.Entity("BeautySalonBooking.Domain.Entities.SalonMaster", b =>
                 {
                     b.HasOne("BeautySalonBooking.Domain.Entities.Master", "Master")
@@ -973,6 +1059,8 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("BeautySalonBooking.Domain.Entities.Booking", b =>
                 {
                     b.Navigation("BookingServices");
+
+                    b.Navigation("Notifications");
 
                     b.Navigation("Rating");
                 });

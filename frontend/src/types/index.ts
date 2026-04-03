@@ -47,10 +47,10 @@ export type UpdateSalonRequest = CreateSalonRequest;
 
 export interface MasterDto {
   id: string;
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string;
-  phone: string;
+  phone?: string;
   photo?: string;
   description?: string;
   autoApproveBookings: boolean;
@@ -272,7 +272,7 @@ export interface AverageRatingDto {
 
 export interface UserDto {
   id: string;
-  email: string;
+  email?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -285,7 +285,7 @@ export interface UserDto {
 
 export interface AdminUserDto {
   id: string;
-  email: string;
+  email?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -303,18 +303,60 @@ export interface AuthResponse {
 }
 
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  email: string;
+  email?: string;
   password: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
   /** 'Client' | 'SalonAdmin' | 'MasterAdmin' */
   role?: string;
+}
+
+// ── Salon Admin Dashboard ────────────────────────────────────────────────────
+
+export interface SalonAdminDashboardDto {
+  activeMasters: number;
+  pendingMasters: number;
+  bookingsToday: number;
+  bookingsThisWeek: number;
+  bookingsThisMonth: number;
+  revenueToday: number;
+  revenueThisWeek: number;
+  revenueThisMonth: number;
+  cancellationRate30d: number;
+  averageRating: number;
+  pendingMastersList: PendingMasterDto[];
+}
+
+export interface PendingMasterDto {
+  userId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  externalProvider?: string;
+  createdAt: string;
+}
+
+export interface SalonAdminMasterDto {
+  masterId: string;
+  userId?: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  photo?: string;
+  isUserActive: boolean;
+  isDeleted: boolean;
+  averageRating?: number;
+  ratingCount: number;
+  servicesCount: number;
+  createdAt: string;
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────

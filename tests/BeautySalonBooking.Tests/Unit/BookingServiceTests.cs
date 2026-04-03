@@ -14,6 +14,15 @@ public class BookingServiceTests
 {
     private readonly Mock<INotificationService> _notifMock = new();
 
+    /// <summary>Returns the next Monday that is guaranteed to be in the future.</summary>
+    private static DateOnly NextMonday()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var daysUntilMonday = ((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntilMonday == 0) daysUntilMonday = 7; // if today is Monday, pick next Monday
+        return today.AddDays(daysUntilMonday);
+    }
+
     private BookingService BuildService(AppDbContext db)
     {
         var availability = new AvailabilityService(db, new ConfigurationBuilder().Build());
@@ -40,9 +49,9 @@ public class BookingServiceTests
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, price: 1500, duration: 60);
 
-        // 2026-03-23 is a Monday — within SalonMaster.WorkingDays
+        // Pick a future Monday — within SalonMaster.WorkingDays
         // SalonMaster has WorkingHoursStart=09:00, WorkingHoursEnd=18:00
-        var date = new DateOnly(2026, 3, 23);
+        var date = NextMonday();
         var start = new TimeOnly(10, 0);
 
         return (ctx, svc, salon.Id, master.Id, service.Id, sm.Id, date, start);
@@ -127,7 +136,7 @@ public class BookingServiceTests
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s1.Id, price: 1000, duration: 60);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s2.Id, price: 2000, duration: 60);
 
-        var date = new DateOnly(2026, 3, 23); // Monday
+        var date = NextMonday();
         var start = new TimeOnly(9, 0);
 
         var req = new CreateBookingRequest(salon.Id, master.Id, "Dan", "+70000000002", null,

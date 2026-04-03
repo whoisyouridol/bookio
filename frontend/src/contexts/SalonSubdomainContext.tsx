@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getSalonBySlug } from '@/api/salons';
 import { useTheme, defaultTheme } from '@/contexts/ThemeContext';
@@ -15,6 +16,7 @@ interface SalonSubdomainContextType {
 export const SalonSubdomainContext = createContext<SalonSubdomainContextType | undefined>(undefined);
 
 export function SalonSubdomainProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const slug = getCurrentSubdomain()!;
   const { setTheme } = useTheme();
 
@@ -46,8 +48,8 @@ export function SalonSubdomainProvider({ children }: { children: ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8 text-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Salon not found</h1>
-          <p className="text-gray-500">The salon "{slug}" does not exist or is no longer active.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('errors.salonSubdomain.notFound')}</h1>
+          <p className="text-gray-500">{t('errors.salonSubdomain.notFoundDescription', { slug })}</p>
         </div>
       </div>
     );
@@ -64,4 +66,8 @@ export function useSalonSubdomain() {
   const ctx = useContext(SalonSubdomainContext);
   if (!ctx) throw new Error('useSalonSubdomain must be used within SalonSubdomainProvider');
   return ctx;
+}
+
+export function useSalonSubdomainOptional() {
+  return useContext(SalonSubdomainContext) ?? null;
 }

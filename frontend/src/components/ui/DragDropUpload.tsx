@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { uploadMedia, resolveMediaUrl } from '@/api/media';
 import { toast } from 'sonner';
 
@@ -24,6 +25,7 @@ function isVideoKey(key: string) {
 }
 
 export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values, onChange }: Props) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,7 +34,7 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
     const replace = maxFiles === 1 && values.length >= 1;
     const remaining = replace ? 1 : maxFiles - values.length;
     if (remaining <= 0) {
-      toast.error(`Maximum ${maxFiles} file(s) allowed.`);
+      toast.error(t('components.dragDrop.maxFilesAllowed', { max: maxFiles }));
       return;
     }
     const toUpload = files.slice(0, remaining);
@@ -41,7 +43,7 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
       const results = await Promise.all(toUpload.map(f => uploadMedia(f, folder)));
       onChange(replace ? results.map(r => r.key) : [...values, ...results.map(r => r.key)]);
     } catch {
-      toast.error('Upload failed. Please try again.');
+      toast.error(t('components.dragDrop.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -72,25 +74,25 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
+        className={`border-2 border-dashed rounded-[var(--radius-lg)] p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
           dragging
-            ? 'border-purple-400 bg-purple-50'
-            : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+            ? 'border-[var(--color-primary)] bg-[var(--color-primary-subtle)]'
+            : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-hover)]'
         }`}
       >
         {uploading ? (
-          <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+          <Loader2 className="w-6 h-6 text-[var(--color-primary)] animate-spin" />
         ) : (
-          <Upload className="w-6 h-6 text-gray-400" />
+          <Upload className="w-6 h-6 text-[var(--color-text-tertiary)]" />
         )}
-        <p className="text-sm text-gray-500">
-          {uploading ? 'Uploading…' : 'Drag & drop or click to upload'}
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          {uploading ? t('components.dragDrop.uploading') : t('components.dragDrop.dragAndDrop')}
         </p>
-        <p className="text-xs text-gray-400">
-          {accept === 'image' && 'JPEG, PNG, WEBP, GIF'}
-          {accept === 'video' && 'MP4, WebM, MOV'}
-          {accept === 'image+video' && 'Images & videos'}
-          {maxFiles > 1 && ` · up to ${maxFiles} files`}
+        <p className="text-xs text-[var(--color-text-tertiary)]">
+          {accept === 'image' && t('components.dragDrop.jpegPngWebpGif')}
+          {accept === 'video' && t('components.dragDrop.mp4WebmMov')}
+          {accept === 'image+video' && t('components.dragDrop.imagesAndVideos')}
+          {maxFiles > 1 && ` · ${t('components.dragDrop.upToFiles', { max: maxFiles })}`}
         </p>
         <input
           ref={inputRef}
@@ -106,7 +108,7 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
       {values.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {values.map((key, i) => (
-            <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+            <div key={i} className="relative group w-20 h-20 rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-bg-subtle)] border border-[var(--color-border)]">
               {isVideoKey(key) ? (
                 <video
                   src={resolveMediaUrl(key)}

@@ -1,36 +1,41 @@
 import { Calendar, Clock } from 'lucide-react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getMyBookings } from '@/api/bookings';
 import { Header } from '@/components/Header';
 import { Badge, bookingStatusBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Loader } from '@/components/ui/Loader';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSalonSubdomainOptional } from '@/contexts/SalonSubdomainContext';
 import { format } from 'date-fns';
 
 export default function MyBookingsPage() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const subdomain = useSalonSubdomainOptional();
+  const salonId = subdomain?.salonId;
 
   const { data: bookings, isLoading } = useQuery({
-    queryKey: ['my-bookings'],
-    queryFn: getMyBookings,
+    queryKey: ['my-bookings', salonId],
+    queryFn: () => getMyBookings(salonId),
     enabled: isAuthenticated,
   });
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)]">
-      <Header title="My Bookings" />
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <Header title={t('myBookings.title')} />
 
       <div className="max-w-md mx-auto px-4 py-6">
         {!isAuthenticated ? (
           <EmptyState
             icon={Calendar}
-            title="Sign in to see your bookings"
-            description="Create an account or sign in to track your appointments"
+            title={t('myBookings.signInToSee')}
+            description={t('myBookings.createAccountOrSignIn')}
             action={
               <Link to="/login" className="text-sm text-[var(--color-primary)] font-medium">
-                Sign in →
+                {t('myBookings.signIn')}
               </Link>
             }
           />
@@ -39,11 +44,11 @@ export default function MyBookingsPage() {
         ) : !bookings?.length ? (
           <EmptyState
             icon={Calendar}
-            title="No bookings yet"
-            description="Book your first appointment to get started"
+            title={t('myBookings.noBookingsYet')}
+            description={t('myBookings.bookFirst')}
             action={
               <Link to="/" className="text-sm text-[var(--color-primary)] font-medium">
-                Browse salons →
+                {t('myBookings.browseSalons')}
               </Link>
             }
           />
@@ -53,14 +58,14 @@ export default function MyBookingsPage() {
               <Link
                 key={booking.id}
                 to={`/booking/${booking.id}`}
-                className="block bg-[var(--color-surface)] rounded-[var(--border-radius)] p-4 shadow-sm border border-[var(--color-border)] hover:shadow-md transition-shadow"
+                className="block bg-[var(--color-surface)] rounded-[var(--radius-lg)] p-4 shadow-[var(--shadow-sm)] border border-[var(--color-border)] hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-semibold text-[var(--color-text)]">{booking.salonName}</h3>
                     <p className="text-sm text-[var(--color-text-secondary)]">{booking.masterName}</p>
                   </div>
-                  <Badge variant={bookingStatusBadge(booking.status)}>{booking.status}</Badge>
+                  <Badge variant={bookingStatusBadge(booking.status)}>{t(`bookingStatus.${booking.status}`, booking.status)}</Badge>
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-[var(--color-text-secondary)]">

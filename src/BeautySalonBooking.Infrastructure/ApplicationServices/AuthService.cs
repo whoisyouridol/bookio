@@ -8,6 +8,7 @@ using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using BeautySalonBooking.Infrastructure.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
@@ -46,8 +47,15 @@ public class AuthService
 
     public async Task<(AuthResponse? result, string? rawRefresh, string? error)> RegisterAsync(RegisterRequest req)
     {
-        if (await _userManager.FindByEmailAsync(req.Email) != null)
+        if (string.IsNullOrWhiteSpace(req.Email) && string.IsNullOrWhiteSpace(req.Phone))
+            return (null, null, "Email or phone number is required");
+
+        if (!string.IsNullOrWhiteSpace(req.Email) && await _userManager.FindByEmailAsync(req.Email) != null)
             return (null, null, "Email is already registered");
+
+        var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+        if (normalizedPhone != null && await FindByPhoneAsync(normalizedPhone) != null)
+            return (null, null, "Phone number is already registered");
 
         // SuperAdmin cannot be self-registered; anything unrecognised falls back to Client
         AppRole role = AppRole.Client;
@@ -58,11 +66,11 @@ public class AuthService
 
         var user = new AppUser
         {
-            UserName = req.Email,
-            Email = req.Email,
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email,
             FirstName = req.FirstName,
             LastName = req.LastName,
-            PhoneNumber = req.Phone,
+            PhoneNumber = normalizedPhone,
             Role = role,
             MustChangePassword = false,
         };
@@ -79,9 +87,14 @@ public class AuthService
 
     public async Task<(AuthResponse? result, string? rawRefresh, string? error)> LoginAsync(LoginRequest req)
     {
-        var user = await _userManager.FindByEmailAsync(req.Email);
+        AppUser? user;
+        if (req.Identifier.Contains('@'))
+            user = await _userManager.FindByEmailAsync(req.Identifier);
+        else
+            user = await FindByPhoneAsync(PhoneNormalizer.Normalize(req.Identifier));
+
         if (user == null || !await _userManager.CheckPasswordAsync(user, req.Password))
-            return (null, null, "Invalid email or password");
+            return (null, null, "Invalid credentials");
 
         if (!user.IsActive)
             return (null, null, "Your account is pending activation by an administrator");
@@ -131,8 +144,15 @@ public class AuthService
         var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == req.SalonId && s.IsActive);
         if (salon == null) return (null, "Salon not found");
 
-        if (await _userManager.FindByEmailAsync(req.Email) != null)
+        if (string.IsNullOrWhiteSpace(req.Email) && string.IsNullOrWhiteSpace(req.Phone))
+            return (null, "Email or phone number is required");
+
+        if (!string.IsNullOrWhiteSpace(req.Email) && await _userManager.FindByEmailAsync(req.Email) != null)
             return (null, "An account with this email is already registered");
+
+        var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+        if (normalizedPhone != null && await FindByPhoneAsync(normalizedPhone) != null)
+            return (null, "Phone number is already registered");
 
         var master = new Domain.Entities.Master
         {
@@ -145,12 +165,12 @@ public class AuthService
 
         var user = new AppUser
         {
-            UserName = req.Email,
-            Email = req.Email,
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email,
             EmailConfirmed = true,
             FirstName = req.FirstName,
             LastName = req.LastName,
-            PhoneNumber = req.Phone,
+            PhoneNumber = normalizedPhone,
             Role = AppRole.Master,
             MasterId = master.Id,
             SalonId = req.SalonId,
@@ -214,7 +234,7 @@ public class AuthService
 
         var user = new AppUser
         {
-            UserName = email,
+            UserName = $"user_{Guid.NewGuid()}",
             Email = email,
             EmailConfirmed = true,
             FirstName = parts.Length > 0 ? parts[0] : email.Split('@')[0],
@@ -232,6 +252,163 @@ public class AuthService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Master registration pending: {Email}, Salon: {SalonId}", email, salonId);
+        return ("Registration submitted. Your account is pending activation by an administrator.", null);
+    }
+
+    // ── Salon admin registration ─────────────────────────────────────────────
+
+    public async Task<(string? message, string? error)> RegisterSalonAdminAsync(SalonAdminRegisterRequest req)
+    {
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == req.SalonId && s.IsActive);
+        if (salon == null) return (null, "Salon not found");
+
+        if (string.IsNullOrWhiteSpace(req.Email) && string.IsNullOrWhiteSpace(req.Phone))
+            return (null, "Email or phone number is required");
+
+        if (!string.IsNullOrWhiteSpace(req.Email) && await _userManager.FindByEmailAsync(req.Email) != null)
+            return (null, "An account with this email is already registered");
+
+        var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+        if (normalizedPhone != null && await FindByPhoneAsync(normalizedPhone) != null)
+            return (null, "Phone number is already registered");
+
+        var user = new AppUser
+        {
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email,
+            EmailConfirmed = true,
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            PhoneNumber = normalizedPhone,
+            Role = AppRole.SalonAdmin,
+            SalonId = req.SalonId,
+            IsActive = false,
+            MustChangePassword = false,
+        };
+
+        var result = await _userManager.CreateAsync(user, req.Password);
+        if (!result.Succeeded)
+            return (null, string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        _logger.LogInformation("Salon admin registration pending: {Email}, Salon: {SalonId}", req.Email, req.SalonId);
+        return ("Registration submitted. Your account is pending activation by an administrator.", null);
+    }
+
+    public async Task<(string? message, string? error)> RegisterSalonAdminWithNewSalonAsync(SalonAdminRegisterWithNewSalonRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Email) && string.IsNullOrWhiteSpace(req.Phone))
+            return (null, "Email or phone number is required");
+
+        if (!string.IsNullOrWhiteSpace(req.Email) && await _userManager.FindByEmailAsync(req.Email) != null)
+            return (null, "An account with this email is already registered");
+
+        var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+        if (normalizedPhone != null && await FindByPhoneAsync(normalizedPhone) != null)
+            return (null, "Phone number is already registered");
+
+        // Create salon with IsActive = false
+        var slug = req.SalonName.ToLower().Replace(" ", "-");
+        // Ensure unique slug
+        var baseSlug = slug;
+        var suffix = 0;
+        while (await _db.Salons.AnyAsync(s => s.Slug == slug))
+        {
+            suffix++;
+            slug = $"{baseSlug}-{suffix}";
+        }
+
+        var salon = new Domain.Entities.Salon
+        {
+            Id = Guid.NewGuid(),
+            Name = req.SalonName,
+            Slug = slug,
+            Address = req.SalonAddress,
+            WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart),
+            WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd),
+            WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList(),
+            IsActive = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _db.Salons.Add(salon);
+        await _db.SaveChangesAsync();
+
+        // Create user linked to new salon, also inactive
+        var user = new AppUser
+        {
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email,
+            EmailConfirmed = true,
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            PhoneNumber = normalizedPhone,
+            Role = AppRole.SalonAdmin,
+            SalonId = salon.Id,
+            IsActive = false,
+            MustChangePassword = false,
+        };
+
+        var result = await _userManager.CreateAsync(user, req.Password);
+        if (!result.Succeeded)
+            return (null, string.Join("; ", result.Errors.Select(e => e.Description)));
+
+        _logger.LogInformation("Salon admin registration with new salon pending: {Email}, Salon: {SalonName} ({SalonId})", req.Email, req.SalonName, salon.Id);
+        return ("Registration submitted. Your account and salon are pending activation by an administrator.", null);
+    }
+
+    public async Task<(string? message, string? error)> RegisterSalonAdminWithGoogleAsync(SalonAdminGoogleAuthRequest req)
+    {
+        var (email, name, googleId) = await ValidateGoogleRequestAsync(req.Credential, req.AccessToken);
+        if (email == null || googleId == null)
+            return (null, "Invalid Google credential");
+
+        return await RegisterSalonAdminExternalAsync(email, name, "Google", googleId, req.SalonId);
+    }
+
+    public async Task<(string? message, string? error)> RegisterSalonAdminWithFacebookAsync(SalonAdminFacebookAuthRequest req)
+    {
+        var (email, name, fbId) = await ValidateFacebookTokenAsync(req.AccessToken);
+        if (fbId == null)
+            return (null, "Invalid Facebook access token");
+        if (email == null)
+            return (null, "Facebook account does not have a verified email address");
+
+        return await RegisterSalonAdminExternalAsync(email, name, "Facebook", fbId, req.SalonId);
+    }
+
+    private async Task<(string? message, string? error)> RegisterSalonAdminExternalAsync(
+        string email, string? name, string provider, string providerId, Guid salonId)
+    {
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == salonId && s.IsActive);
+        if (salon == null)
+            return (null, "Salon not found");
+
+        var existing = await _db.Set<AppUser>()
+            .FirstOrDefaultAsync(u => u.ExternalProvider == provider && u.ExternalProviderId == providerId)
+            ?? await _userManager.FindByEmailAsync(email);
+
+        if (existing != null)
+            return (null, "An account with this email is already registered");
+
+        var parts = name?.Split(' ', 2) ?? [];
+        var user = new AppUser
+        {
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = email,
+            EmailConfirmed = true,
+            FirstName = parts.Length > 0 ? parts[0] : email.Split('@')[0],
+            LastName = parts.Length > 1 ? parts[1] : null,
+            ExternalProvider = provider,
+            ExternalProviderId = providerId,
+            Role = AppRole.SalonAdmin,
+            SalonId = salonId,
+            IsActive = false,
+            MustChangePassword = false,
+        };
+        await _userManager.CreateAsync(user);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Salon admin registration pending: {Email}, Salon: {SalonId}", email, salonId);
         return ("Registration submitted. Your account is pending activation by an administrator.", null);
     }
 
@@ -285,7 +462,7 @@ public class AuthService
             await _userManager.UpdateAsync(user);
         }
 
-        await _notifications.SendPasswordChangedAsync(user.Email!);
+        if (user.Email != null) await _notifications.SendPasswordChangedAsync(user.Email);
         return (true, null);
     }
 
@@ -293,11 +470,18 @@ public class AuthService
 
     public async Task ForgotPasswordAsync(ForgotPasswordRequest req)
     {
-        var user = await _userManager.FindByEmailAsync(req.Email);
-        if (user == null || user.ExternalProvider != null) return; // prevent enumeration
+        AppUser? user;
+        if (req.Identifier.Contains('@'))
+            user = await _userManager.FindByEmailAsync(req.Identifier);
+        else
+            user = await FindByPhoneAsync(PhoneNormalizer.Normalize(req.Identifier));
+
+        if (user == null || user.ExternalProvider != null) return;
+
+        if (string.IsNullOrWhiteSpace(user.Email)) return; // can't send reset without email
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        await _notifications.SendPasswordResetAsync(user.Email!, token);
+        await _notifications.SendPasswordResetAsync(user.Email, token);
     }
 
     // ── Reset Password ────────────────────────────────────────────────────────
@@ -329,7 +513,7 @@ public class AuthService
         var query = _userManager.Users.AsQueryable();
         if (!string.IsNullOrEmpty(role) && Enum.TryParse<AppRole>(role, out var parsed))
             query = query.Where(u => u.Role == parsed);
-        var users = await query.OrderBy(u => u.Email).ToListAsync();
+        var users = await query.OrderBy(u => u.Email ?? u.PhoneNumber ?? "").ToListAsync();
         return users.Select(MapAdminDto).ToList();
     }
 
@@ -337,20 +521,26 @@ public class AuthService
     {
         if (!Enum.TryParse<AppRole>(req.Role, out var role) || role == AppRole.SuperAdmin)
             return (null, "Invalid role");
-        if (await _userManager.FindByEmailAsync(req.Email) != null)
+        if (string.IsNullOrWhiteSpace(req.Email) && string.IsNullOrWhiteSpace(req.Phone))
+            return (null, "Email or phone number is required");
+        if (!string.IsNullOrWhiteSpace(req.Email) && await _userManager.FindByEmailAsync(req.Email) != null)
             return (null, "Email is already registered");
+
+        var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+        if (normalizedPhone != null && await FindByPhoneAsync(normalizedPhone) != null)
+            return (null, "Phone number is already registered");
 
         var autoGenerated = req.Password == null;
         var password = req.Password ?? GenerateTemporaryPassword();
 
         var user = new AppUser
         {
-            UserName = req.Email,
-            Email = req.Email,
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email,
             EmailConfirmed = true,
             FirstName = req.FirstName,
             LastName = req.LastName,
-            PhoneNumber = req.Phone,
+            PhoneNumber = normalizedPhone,
             Role = role,
             SalonId = req.SalonId,
             MasterId = req.MasterId,
@@ -362,7 +552,7 @@ public class AuthService
         if (!result.Succeeded)
             return (null, string.Join("; ", result.Errors.Select(e => e.Description)));
 
-        if (autoGenerated)
+        if (autoGenerated && !string.IsNullOrWhiteSpace(req.Email))
             await _notifications.SendAccountCredentialsAsync(req.Email, password, req.Role);
 
         return (MapAdminDto(user), null);
@@ -458,12 +648,31 @@ public class AuthService
             if (await _userManager.FindByEmailAsync(req.Email) != null)
                 return (null, "Email is already in use");
             user.Email = req.Email;
-            user.UserName = req.Email;
         }
 
         if (req.FirstName != null) user.FirstName = req.FirstName;
         if (req.LastName != null) user.LastName = req.LastName;
-        if (req.Phone != null) user.PhoneNumber = req.Phone;
+        if (req.Phone != null)
+        {
+            var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+            if (normalizedPhone != null && normalizedPhone != user.PhoneNumber)
+            {
+                if (await FindByPhoneAsync(normalizedPhone) != null)
+                    return (null, "Phone number is already in use");
+                user.PhoneNumber = normalizedPhone;
+            }
+            else if (normalizedPhone == null && !string.IsNullOrWhiteSpace(req.Phone))
+            {
+                // User provided an invalid phone (too short) — keep existing
+            }
+            else if (string.IsNullOrWhiteSpace(req.Phone))
+            {
+                user.PhoneNumber = null;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(user.Email) && string.IsNullOrWhiteSpace(user.PhoneNumber))
+            return (null, "User must have at least an email or phone number");
 
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
@@ -479,6 +688,19 @@ public class AuthService
 
         user.IsActive = isActive;
         await _userManager.UpdateAsync(user);
+
+        // When activating a SalonAdmin, also activate their linked salon if it's inactive
+        if (isActive && user.Role == AppRole.SalonAdmin && user.SalonId.HasValue)
+        {
+            var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == user.SalonId.Value);
+            if (salon != null && !salon.IsActive)
+            {
+                salon.IsActive = true;
+                salon.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+        }
+
         return (MapAdminDto(user), null);
     }
 
@@ -492,10 +714,19 @@ public class AuthService
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
+    public async Task<AppUser?> FindUserByIdAsync(Guid userId) =>
+        await _userManager.FindByIdAsync(userId.ToString());
+
+    private async Task<AppUser?> FindByPhoneAsync(string? normalizedPhone)
+    {
+        if (string.IsNullOrEmpty(normalizedPhone)) return null;
+        return await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhone);
+    }
+
     public async Task<(AuthResponse response, string rawRefreshToken)> IssueTokensAsync(AppUser user)
     {
         var accessToken = _tokens.GenerateAccessToken(
-            user.Id, user.Email!, user.Role.ToString(),
+            user.Id, user.Email, user.Role.ToString(),
             user.FirstName, user.LastName,
             user.SalonId, user.MasterId);
 
@@ -532,7 +763,7 @@ public class AuthService
         var parts = name?.Split(' ', 2) ?? [];
         user = new AppUser
         {
-            UserName = email,
+            UserName = $"user_{Guid.NewGuid()}",
             Email = email,
             EmailConfirmed = true,
             FirstName = parts.Length > 0 ? parts[0] : null,
@@ -625,11 +856,11 @@ public class AuthService
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
     private static UserDto MapUserDto(AppUser u) => new(
-        u.Id, u.Email!, u.FirstName, u.LastName, u.PhoneNumber,
+        u.Id, u.Email, u.FirstName, u.LastName, u.PhoneNumber,
         u.Role.ToString(), u.SalonId, u.MasterId, u.MustChangePassword);
 
     private static AdminUserDto MapAdminDto(AppUser u) => new(
-        u.Id, u.Email!, u.FirstName, u.LastName, u.PhoneNumber,
+        u.Id, u.Email, u.FirstName, u.LastName, u.PhoneNumber,
         u.Role.ToString(), u.SalonId, u.MasterId, u.ExternalProvider, u.IsActive, u.CreatedAt);
 
     // ── Private JSON response models ──────────────────────────────────────────

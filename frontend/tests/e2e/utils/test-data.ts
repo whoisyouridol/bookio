@@ -8,6 +8,10 @@ export function uniqueEmail(prefix = 'e2e') {
   return `${prefix}+${uid()}@test.bookvisit.com`;
 }
 
+export function uniquePhone() {
+  return `+1${Date.now().toString().slice(-10)}`;
+}
+
 export function uniqueMaster() {
   const id = uid();
   return {

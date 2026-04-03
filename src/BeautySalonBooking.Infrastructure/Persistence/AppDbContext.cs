@@ -24,6 +24,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<MasterDateOverride> MasterDateOverrides => Set<MasterDateOverride>();
     public DbSet<MasterDateOverrideSlot> MasterDateOverrideSlots => Set<MasterDateOverrideSlot>();
     public DbSet<MasterTimeOff> MasterTimeOffs => Set<MasterTimeOff>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

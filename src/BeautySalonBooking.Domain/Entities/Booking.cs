@@ -27,4 +27,5 @@ public class Booking
     public Master Master { get; set; } = null!;
     public ICollection<BookingService> BookingServices { get; set; } = new List<BookingService>();
     public MasterRating? Rating { get; set; }
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }

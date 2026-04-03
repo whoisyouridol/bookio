@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router';
 import { Calendar, Clock, MapPin, User } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getBooking, cancelBooking } from '@/api/bookings';
 import { Header } from '@/components/Header';
 import { Badge, bookingStatusBadge } from '@/components/ui/Badge';
@@ -11,6 +12,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function ViewBookingPage() {
+  const { t } = useTranslation();
   const { bookingId } = useParams<{ bookingId: string }>();
   const queryClient = useQueryClient();
 
@@ -24,29 +26,29 @@ export default function ViewBookingPage() {
     mutationFn: () => cancelBooking(bookingId!, { side: 'Client', reason: 'Client cancelled' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
-      toast.success('Booking cancelled.');
+      toast.success(t('booking.bookingCancelled'));
     },
-    onError: () => toast.error('Failed to cancel.'),
+    onError: () => toast.error(t('booking.failedToCancel')),
   });
 
   if (isLoading) return <Loader />;
-  if (!booking) return <div className="p-4 text-center text-[var(--color-text-secondary)]">Booking not found.</div>;
+  if (!booking) return <div className="p-4 text-center text-[var(--color-text-secondary)]">{t('booking.bookingNotFound')}</div>;
 
   const canCancel = booking.status === 'Pending' || booking.status === 'Confirmed';
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)]">
-      <Header title="Booking Details" showBack />
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <Header title={t('bookingDetails.title')} showBack />
 
       <div className="max-w-md mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-xs font-mono text-[var(--color-text-secondary)]">{booking.id.slice(0, 8).toUpperCase()}</p>
-          <Badge variant={bookingStatusBadge(booking.status)}>{booking.status}</Badge>
+          <Badge variant={bookingStatusBadge(booking.status)}>{t(`bookingStatus.${booking.status}`, booking.status)}</Badge>
         </div>
 
         <div
           className="bg-[var(--color-surface)] border border-[var(--color-border)] divide-y divide-[var(--color-border)]"
-          style={{ borderRadius: 'var(--border-radius)' }}
+          style={{ borderRadius: 'var(--radius-lg)' }}
         >
           <div className="p-4 space-y-3">
             <InfoRow icon={<MapPin className="w-4 h-4" />} value={booking.salonName} />
@@ -57,7 +59,7 @@ export default function ViewBookingPage() {
           </div>
 
           <div className="p-4 space-y-2">
-            <p className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">Services</p>
+            <p className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">{t('bookingDetails.services')}</p>
             {booking.services.map(s => (
               <div key={s.id} className="flex justify-between text-sm">
                 <span className="text-[var(--color-text)]">{s.serviceName}</span>
@@ -78,14 +80,14 @@ export default function ViewBookingPage() {
             fullWidth
             size="lg"
             loading={cancelMutation.isPending}
-            onClick={() => { if (confirm('Cancel this booking?')) cancelMutation.mutate(); }}
+            onClick={() => { if (confirm(t('booking.cancelConfirm'))) cancelMutation.mutate(); }}
           >
-            Cancel Booking
+            {t('booking.cancelBooking')}
           </Button>
         )}
 
         <Link to="/">
-          <Button variant="ghost" fullWidth>Back to Home</Button>
+          <Button variant="ghost" fullWidth>{t('common.backToHome')}</Button>
         </Link>
       </div>
     </div>

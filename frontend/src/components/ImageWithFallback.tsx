@@ -11,7 +11,7 @@ export function ImageWithFallback(props: ImgHTMLAttributes<HTMLImageElement>) {
 
   if (errored || !resolved) {
     return (
-      <div className={`bg-gray-100 flex items-center justify-center ${className ?? ''}`} style={style}>
+      <div className={`bg-[var(--color-bg-subtle)] flex items-center justify-center ${className ?? ''}`} style={style}>
         <img src={FALLBACK} alt="placeholder" className="w-12 h-12 opacity-40" />
       </div>
     );

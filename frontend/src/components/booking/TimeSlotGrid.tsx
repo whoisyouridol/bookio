@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { TimeSlotDto } from '@/types';
 
 interface TimeSlotGridProps {
@@ -7,10 +8,11 @@ interface TimeSlotGridProps {
 }
 
 export function TimeSlotGrid({ slots, selectedStartTime, onSelect }: TimeSlotGridProps) {
+  const { t } = useTranslation();
   if (slots.length === 0) {
     return (
       <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
-        No available slots for this date.
+        {t('components.timeSlotGrid.noSlotsAvailable')}
       </p>
     );
   }
@@ -26,14 +28,13 @@ export function TimeSlotGrid({ slots, selectedStartTime, onSelect }: TimeSlotGri
             type="button"
             disabled={!available}
             onClick={() => available && onSelect(slot)}
-            className={`py-2 px-1 border-2 text-xs font-medium transition-all ${
+            className={`py-2 px-1 border-2 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
               selected
-                ? 'border-[var(--color-primary)] bg-purple-50 text-[var(--color-primary)]'
+                ? 'border-[var(--color-selection-border)] bg-[var(--color-selection)] text-[var(--color-primary)]'
                 : available
-                ? 'border-[var(--color-border)] text-[var(--color-text)] hover:border-gray-400'
-                : 'border-[var(--color-border)] bg-gray-50 text-gray-300 cursor-not-allowed'
+                ? 'border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-border-strong)]'
+                : 'border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text-tertiary)] cursor-not-allowed'
             }`}
-            style={{ borderRadius: 'var(--border-radius)' }}
           >
             {slot.startTime.slice(0, 5)}
           </button>

@@ -9,10 +9,12 @@ import { Loader } from '@/components/ui/Loader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import type { MasterDto } from '@/types';
 
 export default function MastersPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { role, salonId } = useAuth();
 
@@ -31,8 +33,8 @@ export default function MastersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteMaster,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['masters'] }); toast.success('Master deleted.'); },
-    onError: () => toast.error('Failed to delete.'),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['masters'] }); toast.success(t('admin.masters.masterDeleted')); },
+    onError: () => toast.error(t('admin.masters.failedToDelete')),
   });
 
   const handleDelete = (m: MasterDto) => {
@@ -58,38 +60,38 @@ export default function MastersPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Masters</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">{t('admin.masters.title')}</h1>
         {canCreate && (
           <Link to="/admin/masters/new">
-            <Button size="sm"><Plus className="w-4 h-4 mr-1" /> New Master</Button>
+            <Button size="sm"><Plus className="w-4 h-4 mr-1" /> {t('admin.masters.newMaster')}</Button>
           </Link>
         )}
       </div>
 
       {isLoading ? <Loader /> : !visibleMasters.length ? (
-        <EmptyState icon={Users} title="No masters yet" action={
+        <EmptyState icon={Users} title={t('admin.masters.noMastersYet')} action={
           canCreate
-            ? <Link to="/admin/masters/new"><Button size="sm"><Plus className="w-4 h-4 mr-1" />Add first</Button></Link>
+            ? <Link to="/admin/masters/new"><Button size="sm"><Plus className="w-4 h-4 mr-1" />{t('admin.masters.addFirst')}</Button></Link>
             : undefined
         } />
       ) : (
         <div className="space-y-3">
           {visibleMasters.map(m => (
-            <div key={m.id} className="bg-white rounded-xl border border-gray-200 flex items-center gap-4 p-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 shrink-0">
+            <div key={m.id} className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] flex items-center gap-4 p-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-[var(--color-bg-subtle)] shrink-0">
                 <ImageWithFallback src={m.photo} alt={`${m.firstName} ${m.lastName}`} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900">{m.firstName} {m.lastName}</p>
-                <p className="text-sm text-gray-500">{m.phone}</p>
-                <div className="flex items-center gap-1 text-sm text-gray-500 mt-0.5">
-                  <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <p className="font-semibold text-[var(--color-text)]">{m.firstName} {m.lastName}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{m.phone}</p>
+                <div className="flex items-center gap-1 text-sm text-[var(--color-text-secondary)] mt-0.5">
+                  <Star className="w-3.5 h-3.5 fill-[var(--color-warning)] text-[var(--color-warning)]" />
                   {m.averageRating ? m.averageRating.toFixed(1) : '—'}
-                  <span className="text-gray-400">({m.ratingCount})</span>
+                  <span className="text-[var(--color-text-tertiary)]">({m.ratingCount})</span>
                 </div>
               </div>
               <Badge variant={m.isDeleted ? 'error' : m.isUserActive ? 'success' : 'warning'}>
-                {m.isDeleted ? 'Deleted' : m.isUserActive ? 'Active' : 'Pending'}
+                {m.isDeleted ? t('admin.masters.deleted') : m.isUserActive ? t('admin.masters.active') : t('admin.masters.pending')}
               </Badge>
               <div className="flex gap-1">
                 <Link to={`/admin/masters/${m.id}`}>
@@ -97,7 +99,7 @@ export default function MastersPage() {
                 </Link>
                 {canDelete && (
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(m)}>
-                    <Trash2 className="w-4 h-4 text-red-400" />
+                    <Trash2 className="w-4 h-4 text-[var(--color-error)]" />
                   </Button>
                 )}
               </div>

@@ -102,6 +102,42 @@ public class AuthController : ControllerBase
         return Ok(new { message });
     }
 
+    /// <summary>Register a new salon admin account with email and password. Returns a pending-activation message — no tokens issued.</summary>
+    [HttpPost("salon-admin/register")]
+    public async Task<IActionResult> SalonAdminRegister([FromBody] SalonAdminRegisterRequest req)
+    {
+        var (message, error) = await _auth.RegisterSalonAdminAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
+    /// <summary>Register a new salon admin with a brand-new salon. Both are inactive until SuperAdmin activates.</summary>
+    [HttpPost("salon-admin/register-with-salon")]
+    public async Task<IActionResult> SalonAdminRegisterWithSalon([FromBody] SalonAdminRegisterWithNewSalonRequest req)
+    {
+        var (message, error) = await _auth.RegisterSalonAdminWithNewSalonAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
+    /// <summary>Register a new salon admin account via Google. Returns a pending-activation message — no tokens issued.</summary>
+    [HttpPost("salon-admin/google")]
+    public async Task<IActionResult> SalonAdminGoogle([FromBody] SalonAdminGoogleAuthRequest req)
+    {
+        var (message, error) = await _auth.RegisterSalonAdminWithGoogleAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
+    /// <summary>Register a new salon admin account via Facebook. Returns a pending-activation message — no tokens issued.</summary>
+    [HttpPost("salon-admin/facebook")]
+    public async Task<IActionResult> SalonAdminFacebook([FromBody] SalonAdminFacebookAuthRequest req)
+    {
+        var (message, error) = await _auth.RegisterSalonAdminWithFacebookAsync(req);
+        if (error != null) return BadRequest(new { error });
+        return Ok(new { message });
+    }
+
     /// <summary>Exchange the HttpOnly refresh-token cookie for a new access token (token rotation)</summary>
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh()
@@ -243,7 +279,102 @@ public class AuthController : ControllerBase
             return Redirect($"{returnTo}?auth_error={Uri.EscapeDataString(authError)}");
 
         SetRefreshCookie(rawRefresh!);
-        return Redirect(returnTo!);
+        // Pass the access token in the URL hash so the subdomain frontend can
+        // immediately authenticate without relying on cross-subdomain cookie propagation.
+        return Redirect($"{returnTo}#_at={Uri.EscapeDataString(result.AccessToken)}");
+    }
+
+    /// <summary>
+    /// Exchange a valid Bearer access token for a fresh access+refresh token pair.
+    /// Used by subdomain clients after OAuth redirect to establish a proper HttpOnly
+    /// refresh-cookie scoped to the subdomain's origin.
+    /// </summary>
+    [Authorize]
+    [HttpPost("reissue")]
+    public async Task<IActionResult> Reissue()
+    {
+        var userId = GetUserId();
+        if (userId == null) return Unauthorized();
+
+        var user = await _auth.FindUserByIdAsync(userId.Value);
+        if (user == null) return Unauthorized();
+
+        var (result, rawRefresh) = await _auth.IssueTokensAsync(user);
+        SetRefreshCookie(rawRefresh);
+        return Ok(result);
+    }
+
+    // ── Facebook OAuth Code Flow (for subdomain login) ─────────────────────
+
+    /// <summary>Start Facebook OAuth code flow. Redirects browser to Facebook login dialog.</summary>
+    [HttpGet("facebook/start")]
+    public IActionResult FacebookStart([FromQuery] string? returnTo)
+    {
+        var appId = _config["OAuth:Facebook:AppId"];
+        var callbackUrl = _config["OAuth:Facebook:CallbackUrl"];
+        if (string.IsNullOrEmpty(appId) || string.IsNullOrEmpty(callbackUrl))
+            return BadRequest(new { error = "Facebook OAuth is not configured" });
+
+        var safeReturnTo = SanitizeReturnTo(returnTo);
+
+        var state = Guid.NewGuid().ToString("N");
+        _cache.Set($"facebook_state:{state}", safeReturnTo, TimeSpan.FromMinutes(10));
+
+        var query = new Dictionary<string, string>
+        {
+            ["client_id"]     = appId,
+            ["redirect_uri"]  = callbackUrl,
+            ["response_type"] = "code",
+            ["scope"]         = "email,public_profile",
+            ["state"]         = state,
+        };
+        var url = "https://www.facebook.com/v25.0/dialog/oauth?" +
+                  string.Join("&", query.Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+
+        return Redirect(url);
+    }
+
+    /// <summary>Facebook OAuth callback — exchanges code for access token, sets session cookie, redirects back.</summary>
+    [HttpGet("facebook/callback")]
+    public async Task<IActionResult> FacebookCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error)
+    {
+        if (!string.IsNullOrEmpty(error))
+            return RedirectWithError("facebook_cancelled");
+
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+            return RedirectWithError("invalid_request");
+
+        if (!_cache.TryGetValue($"facebook_state:{state}", out string? returnTo))
+            return RedirectWithError("state_mismatch");
+        _cache.Remove($"facebook_state:{state}");
+
+        var appId     = _config["OAuth:Facebook:AppId"]!;
+        var appSecret = _config["OAuth:Facebook:AppSecret"]!;
+        var callbackUrl = _config["OAuth:Facebook:CallbackUrl"]!;
+
+        // Exchange authorization code for access token
+        var http = _http.CreateClient();
+        var tokenUrl = $"https://graph.facebook.com/v25.0/oauth/access_token" +
+            $"?client_id={Uri.EscapeDataString(appId)}" +
+            $"&redirect_uri={Uri.EscapeDataString(callbackUrl)}" +
+            $"&client_secret={Uri.EscapeDataString(appSecret)}" +
+            $"&code={Uri.EscapeDataString(code)}";
+
+        var tokenResp = await http.GetAsync(tokenUrl);
+        if (!tokenResp.IsSuccessStatusCode)
+            return Redirect($"{returnTo}?auth_error=facebook_token_exchange_failed");
+
+        var tokenJson = await tokenResp.Content.ReadFromJsonAsync<FacebookTokenResponse>();
+        if (string.IsNullOrEmpty(tokenJson?.AccessToken))
+            return Redirect($"{returnTo}?auth_error=missing_access_token");
+
+        // Reuse existing auth service — validates access token via Graph API and finds/creates user
+        var (result, rawRefresh, authError) = await _auth.LoginWithFacebookAsync(new FacebookAuthRequest(tokenJson.AccessToken));
+        if (authError != null)
+            return Redirect($"{returnTo}?auth_error={Uri.EscapeDataString(authError)}");
+
+        SetRefreshCookie(rawRefresh!);
+        return Redirect($"{returnTo}#_at={Uri.EscapeDataString(result!.AccessToken)}");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -310,5 +441,12 @@ public class AuthController : ControllerBase
     {
         [JsonPropertyName("id_token")]    public string? IdToken { get; set; }
         [JsonPropertyName("access_token")] public string? AccessToken { get; set; }
+    }
+
+    private sealed class FacebookTokenResponse
+    {
+        [JsonPropertyName("access_token")] public string? AccessToken { get; set; }
+        [JsonPropertyName("token_type")]   public string? TokenType { get; set; }
+        [JsonPropertyName("expires_in")]   public int? ExpiresIn { get; set; }
     }
 }

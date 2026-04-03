@@ -8,6 +8,7 @@ using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using BeautySalonBooking.Infrastructure.Helpers;
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
 
@@ -79,8 +80,11 @@ public class MasterService
 
     public async Task<(MasterDto? result, string? error)> CreateAsync(CreateMasterRequest req)
     {
-        if (await _userManager.FindByEmailAsync(req.Email) != null)
-            return (null, "An account with this email is already registered");
+        if (!string.IsNullOrWhiteSpace(req.Email) && await _userManager.FindByEmailAsync(req.Email) != null)
+            return (null, "Email is already registered");
+        var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+        if (normalizedPhone != null && await _userManager.Users.AnyAsync(u => u.PhoneNumber == normalizedPhone))
+            return (null, "Phone number is already registered");
 
         var tempPassword = GenerateTemporaryPassword();
 
@@ -97,12 +101,12 @@ public class MasterService
 
         var user = new AppUser
         {
-            UserName = req.Email,
-            Email = req.Email,
+            UserName = $"user_{Guid.NewGuid()}",
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email,
             EmailConfirmed = true,
             FirstName = req.FirstName,
             LastName = req.LastName,
-            PhoneNumber = req.Phone,
+            PhoneNumber = normalizedPhone,
             Role = AppRole.Master,
             MasterId = master.Id,
             IsActive = true,
@@ -116,7 +120,8 @@ public class MasterService
         master.UserId = user.Id;
         await _db.SaveChangesAsync();
 
-        await _notifications.SendMasterCredentialsAsync(req.Email, tempPassword);
+        if (!string.IsNullOrWhiteSpace(req.Email))
+            await _notifications.SendMasterCredentialsAsync(req.Email, tempPassword);
         _logger.LogInformation("Master created by admin: {Email} | Temp password: {Password}", req.Email, tempPassword);
 
         return (MapToDto(master, user.Email ?? string.Empty, user.FirstName, user.LastName, user.PhoneNumber, user.IsActive), null);

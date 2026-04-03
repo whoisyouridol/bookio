@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router';
 import { useEffect } from 'react';
 import { BottomNav } from '@/components/BottomNav';
-import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { BookingProvider } from '@/contexts/BookingContext';
 
 
@@ -16,7 +16,7 @@ function RootContent() {
   }, [pathname, resetTheme]);
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] pb-16" style={{ fontFamily: 'var(--font-family)' }}>
+    <div className="min-h-screen bg-[var(--color-bg)] pb-16" style={{ fontFamily: 'var(--font-body)' }}>
       <Outlet />
       <BottomNav />
     </div>
@@ -26,10 +26,8 @@ function RootContent() {
 
 export default function ClientRoot() {
   return (
-    <ThemeProvider>
-      <BookingProvider>
-        <RootContent />
-      </BookingProvider>
-    </ThemeProvider>
+    <BookingProvider>
+      <RootContent />
+    </BookingProvider>
   );
 }
