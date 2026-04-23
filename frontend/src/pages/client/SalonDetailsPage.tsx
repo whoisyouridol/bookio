@@ -39,7 +39,7 @@ export default function SalonDetailsPage() {
         {/* Hero image */}
         <div className="relative h-56 mx-4 mt-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)]">
           <ImageWithFallback
-            src={salon.photos[0]}
+            src={salon.coverPicture}
             alt={salon.name}
             className="w-full h-full object-cover"
           />

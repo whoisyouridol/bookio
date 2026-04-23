@@ -16,6 +16,12 @@ public interface INotificationService
     /// <summary>Notifies the client that their appointment has been marked complete.</summary>
     Task SendBookingCompletedAsync(Guid bookingId);
 
+    /// <summary>Reminds the master to confirm a pending booking (sent at 3 hours).</summary>
+    Task SendBookingApprovalReminderAsync(Guid bookingId);
+
+    /// <summary>Notifies both parties that a booking expired because the master didn't confirm in time.</summary>
+    Task SendBookingExpiredAsync(Guid bookingId);
+
     /// <summary>Reminder sent one day before the appointment.</summary>
     Task SendReminderOneDayBeforeAsync(Guid bookingId);
 

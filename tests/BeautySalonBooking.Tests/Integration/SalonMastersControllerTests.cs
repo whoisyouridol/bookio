@@ -31,8 +31,7 @@ public class SalonMastersControllerTests : IntegrationTestBase
 
         var (result, status) = await PostAsync<JsonElement>($"/api/salons/{salonId}/masters", new
         {
-            masterId, workingHoursStart = "09:00", workingHoursEnd = "18:00",
-            workingDays = new[] { "Monday" }
+            masterId
         });
 
         status.Should().Be(HttpStatusCode.OK);
@@ -44,11 +43,7 @@ public class SalonMastersControllerTests : IntegrationTestBase
     public async Task Link_Returns400_WhenAlreadyLinked()
     {
         var (salonId, masterId) = await CreateSalonAndMasterAsync();
-        var linkBody = new
-        {
-            masterId, workingHoursStart = "09:00", workingHoursEnd = "18:00",
-            workingDays = new[] { "Monday" }
-        };
+        var linkBody = new { masterId };
 
         await PostAsync<JsonElement>($"/api/salons/{salonId}/masters", linkBody);
         var response = await Client.PostAsJsonAsync($"/api/salons/{salonId}/masters", linkBody);
@@ -63,42 +58,17 @@ public class SalonMastersControllerTests : IntegrationTestBase
 
         var response = await Client.PostAsJsonAsync($"/api/salons/{Guid.NewGuid()}/masters", new
         {
-            masterId, workingHoursStart = "09:00", workingHoursEnd = "18:00",
-            workingDays = new[] { "Monday" }
+            masterId
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Update_Returns200_WithNewSchedule()
-    {
-        var (salonId, masterId) = await CreateSalonAndMasterAsync();
-        await PostAsync<JsonElement>($"/api/salons/{salonId}/masters", new
-        {
-            masterId, workingHoursStart = "09:00", workingHoursEnd = "18:00",
-            workingDays = new[] { "Monday" }
-        });
-
-        var (result, status) = await PutAsync<JsonElement>($"/api/salons/{salonId}/masters/{masterId}", new
-        {
-            workingHoursStart = "11:00", workingHoursEnd = "20:00",
-            workingDays = new[] { "Wednesday", "Thursday" }
-        });
-
-        status.Should().Be(HttpStatusCode.OK);
-        result!.GetProperty("workingHoursStart").GetString().Should().Be("11:00");
-    }
-
-    [Fact]
     public async Task Unlink_Returns204()
     {
         var (salonId, masterId) = await CreateSalonAndMasterAsync();
-        await PostAsync<JsonElement>($"/api/salons/{salonId}/masters", new
-        {
-            masterId, workingHoursStart = "09:00", workingHoursEnd = "18:00",
-            workingDays = new[] { "Monday" }
-        });
+        await PostAsync<JsonElement>($"/api/salons/{salonId}/masters", new { masterId });
 
         var status = await DeleteAsync($"/api/salons/{salonId}/masters/{masterId}");
 

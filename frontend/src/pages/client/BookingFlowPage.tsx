@@ -62,7 +62,7 @@ export default function BookingFlowPage() {
         salonId: salonId!,
         masterId: masterId!,
         clientName,
-        clientPhone,
+        clientPhone: clientPhone || undefined,
         clientEmail: clientEmail || undefined,
         bookingDate: selectedDate,
         startTime: selectedSlot!.startTime,
@@ -171,14 +171,17 @@ export default function BookingFlowPage() {
             >
               <FormField label={t('booking.fullName')} value={clientName} onChange={setClientName} placeholder={t('booking.namePlaceholder')} />
               <FormField label={t('booking.phone')} value={clientPhone} onChange={setClientPhone} placeholder={t('booking.phonePlaceholder')} type="tel" />
-              <FormField label={t('booking.emailOptional')} value={clientEmail} onChange={setClientEmail} placeholder={t('booking.emailPlaceholder')} type="email" />
+              <FormField label={t('booking.email')} value={clientEmail} onChange={setClientEmail} placeholder={t('booking.emailPlaceholder')} type="email" />
+              <p className="text-xs text-[var(--color-text-secondary)] -mt-2">
+                {t('booking.atLeastOneContactRequired')}
+              </p>
             </div>
 
             <div className="flex gap-3">
               <Button variant="secondary" size="lg" onClick={() => setStep('datetime')} className="flex-1">{t('booking.back')}</Button>
               <Button
                 size="lg"
-                disabled={!clientName || !clientPhone}
+                disabled={!clientName || (!clientPhone && !clientEmail)}
                 onClick={() => setStep('review')}
                 className="flex-1"
               >
@@ -209,7 +212,7 @@ export default function BookingFlowPage() {
               style={{ borderRadius: 'var(--radius-lg)' }}
             >
               <p className="text-sm font-medium text-[var(--color-text)]">{clientName}</p>
-              <p className="text-sm text-[var(--color-text-secondary)]">{clientPhone}</p>
+              {clientPhone && <p className="text-sm text-[var(--color-text-secondary)]">{clientPhone}</p>}
               {clientEmail && <p className="text-sm text-[var(--color-text-secondary)]">{clientEmail}</p>}
             </div>
 

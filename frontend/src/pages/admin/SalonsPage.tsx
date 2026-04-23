@@ -51,7 +51,7 @@ export default function SalonsPage() {
           {salons.map(salon => (
             <div key={salon.id} className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] overflow-hidden flex">
               <div className="w-24 h-24 shrink-0">
-                <ImageWithFallback src={salon.photos[0]} alt={salon.name} className="w-full h-full object-cover" />
+                <ImageWithFallback src={salon.coverPicture} alt={salon.name} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 p-4 min-w-0">
                 <div className="flex items-start justify-between gap-2">

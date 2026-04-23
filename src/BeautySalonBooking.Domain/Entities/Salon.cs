@@ -11,12 +11,7 @@ public class Salon
     public TimeOnly WorkingHoursStart { get; set; }
     public TimeOnly WorkingHoursEnd { get; set; }
     public List<DayOfWeek> WorkingDays { get; set; } = new();
-    public List<string> Photos { get; set; } = new();
-    public List<string> Videos { get; set; } = new();
-    public string? PrimaryColor { get; set; }
-    public string? AccentColor { get; set; }
-    public string? BorderRadius { get; set; }
-    public string? LogoUrl { get; set; }
+    public string? CoverPicture { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

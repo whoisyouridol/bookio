@@ -37,7 +37,7 @@ services:
     networks:
       - backend_net
     ports:
-      - "9001:9001"   # MinIO web console (remove in production if not needed)
+      - "9002:9001"   # MinIO web console (remove in production if not needed)
     # Port 9000 is NOT exposed to host — only the api container needs it
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -122,6 +122,10 @@ services:
       # OAuth
       OAuth__Google__ClientId: ${GOOGLE_CLIENT_ID}
 
+      # OpenTelemetry
+      Otel__TempoEndpoint: http://tempo:4317
+      Otel__LokiEndpoint:  http://loki:3100/otlp/v1/logs
+
       # Subdomain cookie domain
       Subdomain__MainDomains__0: localhost
       Subdomain__MainDomains__1: bookvisit.com
@@ -136,6 +140,10 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 15s
@@ -146,6 +154,63 @@ services:
     # Uncomment below for local debugging only:
     # ports:
     #   - "8080:8080"
+
+  # ── Loki (log aggregation) ─────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.0.0
+    restart: unless-stopped
+    volumes:
+      - ./infra/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yaml
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "-O", "/dev/null", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Tempo (distributed tracing) ──────────────────────────────────────────────
+  tempo:
+    image: grafana/tempo:2.4.1
+    restart: unless-stopped
+    volumes:
+      - ./infra/tempo-config.yaml:/etc/tempo/config.yaml:ro
+      - tempo_data:/var/tempo
+    command: -config.file=/etc/tempo/config.yaml
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "-O", "/dev/null", "http://localhost:3200/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Grafana (dashboards) ─────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.0.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - backend_net
+      - frontend_net
+    depends_on:
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
 
   # ── Frontend (React → nginx) ──────────────────────────────────────────────────
   frontend:
@@ -181,4 +246,10 @@ volumes:
   postgres_data:
     driver: local
   minio_data:
+    driver: local
+  loki_data:
+    driver: local
+  tempo_data:
+    driver: local
+  grafana_data:
     driver: local

@@ -15,7 +15,7 @@ export function SalonCard({ salon }: { salon: SalonDto }) {
     >
       <div className="relative h-48 bg-[var(--color-bg-subtle)]">
         <ImageWithFallback
-          src={salon.photos[0]}
+          src={salon.coverPicture}
           alt={salon.name}
           className="w-full h-full object-cover"
         />

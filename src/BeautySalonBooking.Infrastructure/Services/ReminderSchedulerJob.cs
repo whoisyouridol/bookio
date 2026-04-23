@@ -16,19 +16,22 @@ public class ReminderSchedulerJob
     private readonly IConfiguration _configuration;
     private readonly ILogger<ReminderSchedulerJob> _logger;
     private readonly EmailMessages _msg;
+    private readonly SmsMessages _sms;
 
     public ReminderSchedulerJob(
         AppDbContext db,
         IBackgroundJobClient jobClient,
         IConfiguration configuration,
         ILogger<ReminderSchedulerJob> logger,
-        EmailMessages msg)
+        EmailMessages msg,
+        SmsMessages sms)
     {
         _db = db;
         _jobClient = jobClient;
         _configuration = configuration;
         _logger = logger;
         _msg = msg;
+        _sms = sms;
     }
 
     public async Task ScanAndScheduleMissingRemindersAsync()
@@ -76,40 +79,69 @@ public class ReminderSchedulerJob
 
     private async Task<int> EnsureReminderAsync(Booking booking, NotificationType type, DateTime scheduledUtc)
     {
-        // Don't schedule reminders for times already past
         if (scheduledUtc <= DateTime.UtcNow) return 0;
 
-        // Check if a non-cancelled notification already exists for this booking + type
-        var exists = booking.Notifications.Any(n =>
-            n.Type == type
-            && n.Channel == NotificationChannel.Email
-            && n.Status != NotificationStatus.Cancelled);
+        var hasPhone = !string.IsNullOrEmpty(booking.ClientPhone);
+        var hasEmail = !string.IsNullOrEmpty(booking.ClientEmail);
+        if (!hasPhone && !hasEmail) return 0;
 
-        if (exists) return 0;
-
-        var recipientEmail = booking.ClientEmail;
-        if (string.IsNullOrEmpty(recipientEmail)) return 0;
-
-        var serviceNames = booking.BookingServices
-            .Select(bs => bs.MasterService?.Service?.Name ?? "Service")
-            .ToList();
-
+        var scheduled = 0;
         var msgKey = type == NotificationType.Reminder24h ? "reminder24h" : "reminder3h";
-        var kaTitle  = _msg.Get(msgKey, "kaTitle");
-        var enTitle  = _msg.Get(msgKey, "enTitle");
-        var kaMsg    = _msg.Get(msgKey, "kaMessage");
-        var enMsg    = _msg.Get(msgKey, "enMessage");
-        var subject  = _msg.Get(msgKey, "subject");
-        var body = BuildReminderHtml(booking, serviceNames, kaTitle, enTitle, kaMsg, enMsg, _msg);
 
+        // SMS reminder
+        if (hasPhone)
+        {
+            var smsExists = booking.Notifications.Any(n =>
+                n.Type == type && n.Channel == NotificationChannel.Sms
+                && n.Status != NotificationStatus.Cancelled);
+
+            if (!smsExists)
+            {
+                var placeholders = new Dictionary<string, string>
+                {
+                    ["salonName"] = booking.Salon?.Name ?? "",
+                    ["time"] = booking.StartTime.ToString("HH:mm"),
+                    ["date"] = booking.BookingDate.ToString("dd.MM.yyyy")
+                };
+                scheduled += await ScheduleNotificationAsync(booking, type, NotificationChannel.Sms,
+                    scheduledUtc, null, _sms.Format(msgKey, "toClient", placeholders),
+                    booking.ClientPhone, null);
+            }
+        }
+
+        // Email reminder
+        if (hasEmail)
+        {
+            var emailExists = booking.Notifications.Any(n =>
+                n.Type == type && n.Channel == NotificationChannel.Email
+                && n.Status != NotificationStatus.Cancelled);
+
+            if (!emailExists)
+            {
+                var subject = _msg.Get(msgKey, "subject");
+                var body = BuildReminderEmailHtml(booking, msgKey);
+                scheduled += await ScheduleNotificationAsync(booking, type, NotificationChannel.Email,
+                    scheduledUtc, subject, body, null, booking.ClientEmail);
+            }
+        }
+
+        return scheduled;
+    }
+
+    private async Task<int> ScheduleNotificationAsync(
+        Booking booking, NotificationType type, NotificationChannel channel,
+        DateTime scheduledUtc, string? subject, string body,
+        string? phone, string? email)
+    {
         var notification = new Notification
         {
             Id = Guid.NewGuid(),
             BookingId = booking.Id,
             Type = type,
-            Channel = NotificationChannel.Email,
+            Channel = channel,
             Status = NotificationStatus.Pending,
-            RecipientEmail = recipientEmail,
+            RecipientPhone = phone,
+            RecipientEmail = email,
             Subject = subject,
             Body = body,
             ScheduledAt = scheduledUtc,
@@ -127,56 +159,23 @@ public class ReminderSchedulerJob
         notification.HangfireJobId = jobId;
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Scheduled {Type} reminder for booking {BookingId} at {ScheduledAt}",
-            type, booking.Id, scheduledUtc);
+        _logger.LogInformation("Scheduled {Channel} {Type} reminder for booking {BookingId} at {ScheduledAt}",
+            channel, type, booking.Id, scheduledUtc);
 
         return 1;
     }
 
-    private static string BuildReminderHtml(Booking booking, List<string> serviceNames,
-        string kaTitle, string enTitle, string kaMessage, string enMessage, EmailMessages msg)
+    private string BuildReminderEmailHtml(Booking booking, string msgKey)
     {
-        var serviceItems = string.Join("", serviceNames.Select(s =>
-            $"<li style=\"margin-bottom:4px;color:#1A1614;\">{s}</li>"));
-
-        var content = $"""
-            <h2 style="margin:0 0 4px;font-size:22px;font-weight:600;color:#1A1614;">{kaTitle}</h2>
-            <p style="margin:0 0 4px;font-size:13px;color:#B8623A;font-weight:500;letter-spacing:.5px;text-transform:uppercase;">{enTitle}</p>
-            <div style="height:1px;background:#E8E2DA;margin:16px 0 24px;"></div>
-
-            <p style="margin:0 0 4px;color:#1A1614;">გამარჯობა, <strong>{booking.ClientName}</strong>!</p>
-            <p style="margin:0 0 8px;color:#1A1614;">{kaMessage}</p>
-            <p style="margin:0 0 24px;font-size:13px;color:#6E6259;">{enMessage}</p>
-
-            <table style="width:100%;border-collapse:collapse;background:#FAF8F5;border-radius:10px;overflow:hidden;margin-bottom:24px;">
-              <tr>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;width:38%;">{msg.Label("salon")}</td>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;font-weight:500;">{booking.Salon?.Name}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;">{msg.Label("date")}</td>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;">{booking.BookingDate:dd MMM yyyy}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;">{msg.Label("time")}</td>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;">{booking.StartTime:HH:mm} – {booking.EndTime:HH:mm}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;">{msg.Label("services")}</td>
-                <td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;"><ul style="margin:0;padding-left:16px;">{serviceItems}</ul></td>
-              </tr>
-              <tr>
-                <td colspan="2" style="padding:0;">
-                  <div style="background:#B8623A;padding:12px 16px;display:flex;justify-content:space-between;">
-                    <span style="color:#FFFFFF;font-size:14px;font-weight:600;">{msg.Label("total")}</span>
-                    <span style="color:#FFFFFF;font-size:16px;font-weight:700;">{booking.TotalPrice:F2} ₾</span>
-                  </div>
-                </td>
-              </tr>
-            </table>
-
-            <p style="margin:0;font-size:14px;color:#1A1614;">{msg.Label("seeSoon")}</p>
-            """;
+        var serviceRows = string.Join("", booking.BookingServices.Select(bs =>
+        {
+            var name = bs.MasterService?.Service?.Name ?? "მომსახურება / Service";
+            return "<tr>" +
+                $"<td style=\"padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;\">{name}</td>" +
+                $"<td style=\"padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#6E6259;white-space:nowrap;\">{bs.DurationMinutes} წთ / min</td>" +
+                $"<td style=\"padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#B8623A;font-weight:600;text-align:right;white-space:nowrap;\">{bs.Price:F2} ₾</td>" +
+                "</tr>";
+        }));
 
         return $"""
             <!DOCTYPE html>
@@ -186,21 +185,38 @@ public class ReminderSchedulerJob
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF8F5;padding:32px 16px;">
                 <tr><td align="center">
                   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-                    <tr>
-                      <td style="background:#B8623A;border-radius:14px 14px 0 0;padding:24px 32px;">
-                        <span style="font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:-0.5px;">BookVisit</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="background:#FFFFFF;padding:32px;border-left:1px solid #E8E2DA;border-right:1px solid #E8E2DA;">
-                        {content}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="background:#FAF8F5;border:1px solid #E8E2DA;border-top:none;border-radius:0 0 14px 14px;padding:16px 32px;text-align:center;">
-                        <p style="margin:0;font-size:12px;color:#A69B90;">{msg.Label("footer")}</p>
-                      </td>
-                    </tr>
+                    <tr><td style="background:#B8623A;border-radius:14px 14px 0 0;padding:24px 32px;">
+                      <span style="font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:-0.5px;">BookVisit</span>
+                    </td></tr>
+                    <tr><td style="background:#FFFFFF;padding:32px;border-left:1px solid #E8E2DA;border-right:1px solid #E8E2DA;">
+                      <h2 style="margin:0 0 4px;font-size:22px;font-weight:600;color:#1A1614;">{_msg.Get(msgKey, "kaTitle")}</h2>
+                      <p style="margin:0 0 4px;font-size:13px;color:#B8623A;font-weight:500;letter-spacing:.5px;text-transform:uppercase;">{_msg.Get(msgKey, "enTitle")}</p>
+                      <div style="height:1px;background:#E8E2DA;margin:16px 0 24px;"></div>
+                      <p style="margin:0 0 4px;color:#1A1614;">გამარჯობა, <strong>{booking.ClientName}</strong>!</p>
+                      <p style="margin:0 0 8px;color:#1A1614;">{_msg.Get(msgKey, "kaMessage")}</p>
+                      <p style="margin:0 0 24px;font-size:13px;color:#6E6259;">{_msg.Get(msgKey, "enMessage")}</p>
+                      <table style="width:100%;border-collapse:collapse;background:#FAF8F5;border-radius:10px;overflow:hidden;margin-bottom:24px;">
+                        <tr><td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;width:38%;">{_msg.Label("salon")}</td><td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;font-weight:500;">{booking.Salon?.Name}</td></tr>
+                        <tr><td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;">{_msg.Label("date")}</td><td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;">{booking.BookingDate:dd MMM yyyy}</td></tr>
+                        <tr><td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:13px;color:#6E6259;">{_msg.Label("time")}</td><td style="padding:10px 12px;border-bottom:1px solid #E8E2DA;font-size:14px;color:#1A1614;">{booking.StartTime:HH:mm} – {booking.EndTime:HH:mm}</td></tr>
+                      </table>
+                      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#1A1614;">{_msg.Label("services")}</p>
+                      <table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
+                        <thead><tr style="background:#FBF0E8;">
+                          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#B8623A;font-weight:600;">მომსახურება</th>
+                          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#B8623A;font-weight:600;">ხანგრძლივობა</th>
+                          <th style="padding:8px 12px;text-align:right;font-size:12px;color:#B8623A;font-weight:600;">ფასი</th>
+                        </tr></thead>
+                        <tbody>{serviceRows}</tbody>
+                      </table>
+                      <div style="background:#B8623A;border-radius:0 0 10px 10px;padding:12px 16px;display:flex;justify-content:space-between;">
+                        <span style="color:#FFFFFF;font-size:14px;font-weight:600;">{_msg.Label("total")}</span>
+                        <span style="color:#FFFFFF;font-size:16px;font-weight:700;">{booking.TotalPrice:F2} ₾</span>
+                      </div>
+                    </td></tr>
+                    <tr><td style="background:#FAF8F5;border:1px solid #E8E2DA;border-top:none;border-radius:0 0 14px 14px;padding:16px 32px;text-align:center;">
+                      <p style="margin:0;font-size:12px;color:#A69B90;">{_msg.Label("footer")}</p>
+                    </td></tr>
                   </table>
                 </td></tr>
               </table>
@@ -208,4 +224,5 @@ public class ReminderSchedulerJob
             </html>
             """;
     }
+
 }

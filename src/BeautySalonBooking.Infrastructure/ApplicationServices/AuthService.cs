@@ -598,18 +598,28 @@ public class AuthService
 
             if (!linkExists)
             {
-                // Create a SalonMaster link with salon defaults
+                // Create a SalonMaster link and auto-create weekly slots from salon defaults
                 var salon = await _db.Salons.FirstAsync(s => s.Id == req.SalonId.Value);
-                _db.SalonMasters.Add(new Domain.Entities.SalonMaster
+                var sm = new Domain.Entities.SalonMaster
                 {
                     Id = Guid.NewGuid(),
                     SalonId = req.SalonId.Value,
                     MasterId = req.MasterId.Value,
-                    WorkingHoursStart = salon.WorkingHoursStart,
-                    WorkingHoursEnd = salon.WorkingHoursEnd,
-                    WorkingDays = salon.WorkingDays.ToList(),
                     IsActive = true,
-                });
+                };
+                _db.SalonMasters.Add(sm);
+                await _db.SaveChangesAsync();
+
+                // Auto-create weekly slots from salon schedule
+                var slots = salon.WorkingDays.Select(day => new Domain.Entities.MasterWeeklySlot
+                {
+                    Id = Guid.NewGuid(),
+                    SalonMasterId = sm.Id,
+                    DayOfWeek = day,
+                    StartTime = salon.WorkingHoursStart,
+                    EndTime = salon.WorkingHoursEnd,
+                }).ToList();
+                _db.MasterWeeklySlots.AddRange(slots);
                 await _db.SaveChangesAsync();
             }
             else

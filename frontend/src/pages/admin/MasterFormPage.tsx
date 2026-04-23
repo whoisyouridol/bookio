@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMaster, createMaster, updateMaster, getMasterServices, addMasterService, updateMasterService, removeMasterService, getMasterSalons } from '@/api/masters';
-import { updateSalonMaster } from '@/api/salons';
 import { getServices } from '@/api/services';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
@@ -12,7 +11,7 @@ import { Loader } from '@/components/ui/Loader';
 import { resolveMediaUrl } from '@/api/media';
 import { toast } from 'sonner';
 import { Plus, Trash2, Info, Edit2, Check, X } from 'lucide-react';
-import type { MasterServiceDto, SalonMasterWithSalonDto } from '@/types';
+import type { MasterServiceDto } from '@/types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -65,26 +64,6 @@ export default function MasterFormPage() {
   const [addDuration, setAddDuration] = useState('');
   const [addPhotoKeys, setAddPhotoKeys] = useState<string[]>([]);
   const [addDescription, setAddDescription] = useState('');
-
-  // Per-salon schedule editing state
-  const [editingScheduleSalonId, setEditingScheduleSalonId] = useState<string | null>(null);
-  const [schedHoursStart, setSchedHoursStart] = useState('09:00');
-  const [schedHoursEnd, setSchedHoursEnd] = useState('21:00');
-  const [schedDays, setSchedDays] = useState<string[]>([]);
-
-  const openScheduleEdit = (sm: SalonMasterWithSalonDto) => {
-    setEditingScheduleSalonId(sm.salonId);
-    setSchedHoursStart(sm.workingHoursStart.slice(0, 5));
-    setSchedHoursEnd(sm.workingHoursEnd.slice(0, 5));
-    setSchedDays(sm.workingDays);
-  };
-
-  const closeScheduleEdit = () => {
-    setEditingScheduleSalonId(null);
-    setSchedHoursStart('09:00');
-    setSchedHoursEnd('21:00');
-    setSchedDays([]);
-  };
 
   // Edit-service inline state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -174,21 +153,6 @@ export default function MasterFormPage() {
     },
   });
 
-  const updateScheduleMutation = useMutation({
-    mutationFn: (salonId: string) => updateSalonMaster(salonId, masterId!, {
-      workingHoursStart: schedHoursStart,
-      workingHoursEnd: schedHoursEnd,
-      workingDays: schedDays,
-    }),
-    onSuccess: (_, salonId) => {
-      queryClient.invalidateQueries({ queryKey: ['masterSalons', masterId] });
-      queryClient.invalidateQueries({ queryKey: ['salon', salonId] });
-      closeScheduleEdit();
-      toast.success(t('admin.masterForm.scheduleUpdated'));
-    },
-    onError: () => toast.error(t('admin.masterForm.failedToUpdateSchedule')),
-  });
-
   if (!isNew && isLoading) return <Loader />;
 
   return (
@@ -251,70 +215,16 @@ export default function MasterFormPage() {
         </div>
       </form>
 
-      {/* Salons & Schedule section (only when editing) */}
+      {/* Salons section (only when editing) */}
       {!isNew && masterSalons.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-[var(--color-text)] mb-4">{t('admin.masterForm.salonsAndSchedule')}</h2>
-          <div className="space-y-3">
-            {masterSalons.map(sm => {
-              const isEditing = editingScheduleSalonId === sm.salonId;
-              return (
-                <div key={sm.salonId} className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface)]">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">{sm.salonName}</p>
-                      <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                        {sm.workingHoursStart.slice(0, 5)}–{sm.workingHoursEnd.slice(0, 5)}
-                        {' · '}{sm.workingDays.map((d: string) => d.slice(0, 3)).join(', ')}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => isEditing ? closeScheduleEdit() : openScheduleEdit(sm)}
-                      className="text-sm font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]"
-                    >
-                      {isEditing ? t('admin.masterForm.cancel') : t('admin.availability.editSchedule')}
-                    </button>
-                  </div>
-
-                  {isEditing && (
-                    <div className="border-t border-[var(--color-divider)] bg-[var(--color-bg)] p-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField label={t('admin.masterForm.worksFrom')} value={schedHoursStart} onChange={setSchedHoursStart} type="time" />
-                        <FormField label={t('admin.masterForm.worksUntil')} value={schedHoursEnd} onChange={setSchedHoursEnd} type="time" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">{t('admin.masterForm.workingDays')}</label>
-                        <div className="flex flex-wrap gap-2">
-                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => setSchedDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
-                              className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-colors ${
-                                schedDays.includes(day)
-                                  ? 'border-[var(--color-primary)] bg-[var(--color-primary-subtle)] text-[var(--color-primary)]'
-                                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-gray-400'
-                              }`}
-                            >
-                              {day.slice(0, 3)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => updateScheduleMutation.mutate(sm.salonId)}
-                        disabled={schedDays.length === 0 || updateScheduleMutation.isPending}
-                        className="w-full px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors font-medium"
-                      >
-                        {updateScheduleMutation.isPending ? t('admin.masterForm.saving') : t('admin.masterForm.saveSchedule')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="space-y-2">
+            {masterSalons.map(sm => (
+              <div key={sm.salonId} className="flex items-center px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg">
+                <p className="text-sm font-medium text-[var(--color-text)]">{sm.salonName}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getSalonBySlug } from '@/api/salons';
-import { useTheme, defaultTheme } from '@/contexts/ThemeContext';
 import { getCurrentSubdomain } from '@/lib/subdomain';
 import { Loader } from '@/components/ui/Loader';
 import type { SalonDetailDto } from '@/types';
@@ -18,23 +17,12 @@ export const SalonSubdomainContext = createContext<SalonSubdomainContextType | u
 export function SalonSubdomainProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const slug = getCurrentSubdomain()!;
-  const { setTheme } = useTheme();
 
   const { data: salon, isLoading, error } = useQuery({
     queryKey: ['salon-subdomain', slug],
     queryFn: () => getSalonBySlug(slug),
     staleTime: 5 * 60 * 1000,
   });
-
-  useEffect(() => {
-    if (!salon) return;
-    setTheme({
-      ...defaultTheme,
-      ...(salon.primaryColor && { primary: salon.primaryColor }),
-      ...(salon.accentColor && { accent: salon.accentColor }),
-      ...(salon.borderRadius && { borderRadius: salon.borderRadius }),
-    });
-  }, [salon, setTheme]);
 
   if (isLoading) {
     return (

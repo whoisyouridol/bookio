@@ -14,14 +14,17 @@ public class BookingsController : ControllerBase
     private readonly BookingService _bookingService;
     private readonly IValidator<CreateBookingRequest> _createValidator;
     private readonly IValidator<CancelBookingRequest> _cancelValidator;
+    private readonly ILogger<BookingsController> _logger;
 
     public BookingsController(BookingService bookingService,
         IValidator<CreateBookingRequest> createValidator,
-        IValidator<CancelBookingRequest> cancelValidator)
+        IValidator<CancelBookingRequest> cancelValidator,
+        ILogger<BookingsController> logger)
     {
         _bookingService = bookingService;
         _createValidator = createValidator;
         _cancelValidator = cancelValidator;
+        _logger = logger;
     }
 
     /// <summary>List all bookings with optional filters</summary>
@@ -59,6 +62,9 @@ public class BookingsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest req)
     {
+        _logger.LogInformation("Booking request received for Salon={SalonId} Master={MasterId} Date={Date}",
+            req.SalonId, req.MasterId, req.BookingDate);
+
         var validation = await _createValidator.ValidateAsync(req);
         if (!validation.IsValid) return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");

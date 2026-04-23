@@ -10,12 +10,7 @@ public record SalonDto(
     string WorkingHoursStart,
     string WorkingHoursEnd,
     List<string> WorkingDays,
-    List<string> Photos,
-    List<string> Videos,
-    string? PrimaryColor,
-    string? AccentColor,
-    string? BorderRadius,
-    string? LogoUrl,
+    string? CoverPicture,
     bool IsActive,
     DateTime CreatedAt
 );
@@ -30,12 +25,7 @@ public record SalonDetailDto(
     string WorkingHoursStart,
     string WorkingHoursEnd,
     List<string> WorkingDays,
-    List<string> Photos,
-    List<string> Videos,
-    string? PrimaryColor,
-    string? AccentColor,
-    string? BorderRadius,
-    string? LogoUrl,
+    string? CoverPicture,
     bool IsActive,
     DateTime CreatedAt,
     List<SalonMasterDto> Masters
@@ -50,12 +40,7 @@ public record CreateSalonRequest(
     string WorkingHoursStart,
     string WorkingHoursEnd,
     List<string> WorkingDays,
-    List<string>? Photos,
-    List<string>? Videos,
-    string? PrimaryColor,
-    string? AccentColor,
-    string? BorderRadius,
-    string? LogoUrl
+    string? CoverPicture
 );
 
 public record UpdateSalonRequest(
@@ -67,10 +52,5 @@ public record UpdateSalonRequest(
     string WorkingHoursStart,
     string WorkingHoursEnd,
     List<string> WorkingDays,
-    List<string>? Photos,
-    List<string>? Videos,
-    string? PrimaryColor,
-    string? AccentColor,
-    string? BorderRadius,
-    string? LogoUrl
+    string? CoverPicture
 );

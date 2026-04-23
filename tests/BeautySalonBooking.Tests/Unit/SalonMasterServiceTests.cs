@@ -8,10 +8,7 @@ namespace BeautySalonBooking.Tests.Unit;
 public class SalonMasterServiceTests
 {
     private static LinkMasterToSalonRequest MakeRequest(Guid masterId) =>
-        new(masterId, "09:00", "18:00", ["Monday", "Tuesday"]);
-
-    private static UpdateSalonMasterRequest MakeUpdateRequest() =>
-        new("10:00", "20:00", ["Friday"]);
+        new(masterId);
 
     // ── Link ────────────────────────────────────────────────────────────────
 
@@ -29,6 +26,23 @@ public class SalonMasterServiceTests
         result.Should().NotBeNull();
         result!.SalonId.Should().Be(salon.Id);
         result.MasterId.Should().Be(master.Id);
+    }
+
+    [Fact]
+    public async Task Link_CreatesWeeklySlots_FromSalonDefaults()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = new SalonMasterService(db);
+        var salon = await TestData.CreateSalonAsync(db);
+        var master = await TestData.CreateMasterAsync(db);
+
+        var (result, _) = await svc.LinkAsync(salon.Id, MakeRequest(master.Id));
+
+        var slots = db.MasterWeeklySlots
+            .Where(w => w.SalonMasterId == result!.Id)
+            .ToList();
+        slots.Should().HaveCount(salon.WorkingDays.Count);
+        slots.Should().OnlyContain(s => s.StartTime == salon.WorkingHoursStart && s.EndTime == salon.WorkingHoursEnd);
     }
 
     [Fact]
@@ -86,35 +100,6 @@ public class SalonMasterServiceTests
 
         error.Should().BeNull();
         result!.IsActive.Should().BeTrue();
-    }
-
-    // ── Update ──────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task Update_ChangesSchedule()
-    {
-        var db = InMemoryDbHelper.Create();
-        var svc = new SalonMasterService(db);
-        var salon = await TestData.CreateSalonAsync(db);
-        var master = await TestData.CreateMasterAsync(db);
-        await TestData.LinkMasterAsync(db, salon.Id, master.Id);
-
-        var (result, error) = await svc.UpdateAsync(salon.Id, master.Id, MakeUpdateRequest());
-
-        error.Should().BeNull();
-        result!.WorkingHoursStart.Should().Be("10:00");
-        result.WorkingHoursEnd.Should().Be("20:00");
-    }
-
-    [Fact]
-    public async Task Update_ReturnsError_WhenLinkNotFound()
-    {
-        var db = InMemoryDbHelper.Create();
-        var svc = new SalonMasterService(db);
-
-        var (result, error) = await svc.UpdateAsync(Guid.NewGuid(), Guid.NewGuid(), MakeUpdateRequest());
-
-        error.Should().NotBeNull();
     }
 
     // ── Unlink ──────────────────────────────────────────────────────────────

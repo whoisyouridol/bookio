@@ -84,14 +84,17 @@ public static class DependencyInjection
         });
         services.AddSingleton<IStorageService, MinioStorageService>();
 
-        // ── Email messages (centralised JSON strings) ─────────────────────────
+        // ── Message templates (centralised JSON strings) ────────────────────
         services.AddSingleton<Resources.EmailMessages>();
+        services.AddSingleton<Resources.SmsMessages>();
 
-        // ── SMTP ─────────────────────────────────────────────────────────────
+        // ── SMTP + SMS ──────────────────────────────────────────────────────
         services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
         services.AddScoped<IEmailSender, EmailSender>();
+        services.AddScoped<ISmsSender, StubSmsSender>();
         services.AddScoped<NotificationJobProcessor>();
         services.AddScoped<ReminderSchedulerJob>();
+        services.AddScoped<BookingExpirationJob>();
 
         // ── Application services ───────────────────────────────────────────────
         services.AddScoped<INotificationService, NotificationService>();
@@ -103,8 +106,7 @@ public static class DependencyInjection
         services.AddScoped<SalonMasterService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<MasterServiceManager>();
-        services.AddScoped<TimeSlotService>();
-        services.AddScoped<AvailabilityService>();
+services.AddScoped<AvailabilityService>();
         services.AddScoped<BookingService>();
         services.AddScoped<RatingService>();
         services.AddScoped<SalonAdminService>();

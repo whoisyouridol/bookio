@@ -9,7 +9,7 @@ public class Booking
     public Guid MasterId { get; set; }
     public Guid? UserId { get; set; }
     public string ClientName { get; set; } = string.Empty;
-    public string ClientPhone { get; set; } = string.Empty;
+    public string? ClientPhone { get; set; }
     public string? ClientEmail { get; set; }
     public DateOnly BookingDate { get; set; }
     public TimeOnly StartTime { get; set; }

@@ -7,3 +7,4 @@ export { EmptyState } from './EmptyState';
 export { InfoRow } from './InfoRow';
 export { DragDropUpload } from './DragDropUpload';
 export { DatePicker } from './DatePicker';
+export { Collapse } from './Collapse';

@@ -46,6 +46,18 @@ public class MediaController : ControllerBase
         return Ok(new { key });
     }
 
+    /// <summary>Delete a media object by its key.</summary>
+    [Authorize]
+    [HttpDelete("{**key}")]
+    public async Task<IActionResult> Delete(string key, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return BadRequest();
+
+        await _storage.DeleteAsync(key, ct);
+        return NoContent();
+    }
+
     /// <summary>Stream the media file for the given object key.</summary>
     [AllowAnonymous]
     [HttpGet("{**key}")]

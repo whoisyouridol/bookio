@@ -6,17 +6,11 @@ public record SalonMasterDto(
     Guid MasterId,
     string MasterFirstName,
     string MasterLastName,
-    string WorkingHoursStart,
-    string WorkingHoursEnd,
-    List<string> WorkingDays,
     bool IsActive
 );
 
 public record LinkMasterToSalonRequest(
-    Guid MasterId,
-    string WorkingHoursStart,
-    string WorkingHoursEnd,
-    List<string> WorkingDays
+    Guid MasterId
 );
 
 public record SalonMasterWithSalonDto(
@@ -24,14 +18,5 @@ public record SalonMasterWithSalonDto(
     Guid SalonId,
     Guid MasterId,
     string SalonName,
-    string WorkingHoursStart,
-    string WorkingHoursEnd,
-    List<string> WorkingDays,
     bool IsActive
-);
-
-public record UpdateSalonMasterRequest(
-    string WorkingHoursStart,
-    string WorkingHoursEnd,
-    List<string> WorkingDays
 );

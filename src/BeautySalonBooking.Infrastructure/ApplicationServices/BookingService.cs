@@ -3,10 +3,11 @@ using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.Entities;
+using BeautySalonBooking.Infrastructure.Observability;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-// TimeSlotStatus import kept for potential legacy compatibility
+using Microsoft.Extensions.Logging;
 
 namespace BeautySalonBooking.Infrastructure.ApplicationServices;
 
@@ -15,14 +16,17 @@ public class BookingService
     private readonly AppDbContext _db;
     private readonly AvailabilityService _availability;
     private readonly INotificationService _notifications;
+    private readonly ILogger<BookingService> _logger;
     private readonly int _tzOffsetHours;
 
     public BookingService(AppDbContext db, AvailabilityService availability,
-        INotificationService notifications, IConfiguration config)
+        INotificationService notifications, IConfiguration config,
+        ILogger<BookingService> logger)
     {
         _db = db;
         _availability = availability;
         _notifications = notifications;
+        _logger = logger;
         _tzOffsetHours = config.GetValue<int>("Booking:TimezoneOffsetHours", 0);
     }
 
@@ -81,6 +85,15 @@ public class BookingService
 
     public async Task<(BookingDto? result, string? error)> CreateAsync(CreateBookingRequest req, Guid? userId = null)
     {
+        using var activity = Telemetry.Source.StartActivity("Booking.Create");
+        activity?.SetTag("booking.salon_id", req.SalonId.ToString());
+        activity?.SetTag("booking.master_id", req.MasterId.ToString());
+        activity?.SetTag("booking.service_count", req.ServiceIds.Count);
+        activity?.SetTag("booking.date", req.BookingDate);
+
+        _logger.LogInformation("Creating booking: Salon={SalonId} Master={MasterId} Services={ServiceCount} Date={Date} Time={Time}",
+            req.SalonId, req.MasterId, req.ServiceIds.Count, req.BookingDate, req.StartTime);
+
         if (!DateOnly.TryParse(req.BookingDate, out var date))
             return (null, "Invalid booking date");
         if (!TimeOnly.TryParse(req.StartTime, out var startTime))
@@ -112,62 +125,83 @@ public class BookingService
         decimal totalPrice = masterServices.Sum(ms => ms.Price);
         var endTime = startTime.AddMinutes(totalDuration);
 
-        // Validate availability using on-the-fly engine (no pre-generated slots needed)
-        var (available, availError) = await _availability.ValidateBookingSlotAsync(
-            req.SalonId, req.MasterId, date, startTime, endTime);
-        if (!available)
-            return (null, availError ?? "The requested time slot is not available");
+        // Use serializable transaction to prevent concurrent double bookings.
+        // The validate + insert must be atomic — without this, two concurrent requests
+        // for the same slot can both pass validation and both create bookings.
+        await using var transaction = await _db.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
 
-        var booking = new Booking
+        try
         {
-            Id = Guid.NewGuid(),
-            SalonId = req.SalonId,
-            MasterId = req.MasterId,
-            UserId = userId,
-            ClientName = req.ClientName,
-            ClientPhone = req.ClientPhone,
-            ClientEmail = req.ClientEmail,
-            BookingDate = date,
-            StartTime = startTime,
-            EndTime = endTime,
-            TotalPrice = totalPrice,
-            TotalDurationMinutes = totalDuration,
-            Status = BookingStatus.Pending,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+            // Validate availability using on-the-fly engine (no pre-generated slots needed)
+            var (available, availError) = await _availability.ValidateBookingSlotAsync(
+                req.SalonId, req.MasterId, date, startTime, endTime);
+            if (!available)
+                return (null, availError ?? "The requested time slot is not available");
 
-        booking.BookingServices = masterServices.Select(ms => new Domain.Entities.BookingService
-        {
-            Id = Guid.NewGuid(),
-            BookingId = booking.Id,
-            MasterServiceId = ms.Id,
-            Price = ms.Price,
-            DurationMinutes = ms.DurationMinutes,
-        }).ToList();
+            var booking = new Booking
+            {
+                Id = Guid.NewGuid(),
+                SalonId = req.SalonId,
+                MasterId = req.MasterId,
+                UserId = userId,
+                ClientName = req.ClientName,
+                ClientPhone = req.ClientPhone,
+                ClientEmail = req.ClientEmail,
+                BookingDate = date,
+                StartTime = startTime,
+                EndTime = endTime,
+                TotalPrice = totalPrice,
+                TotalDurationMinutes = totalDuration,
+                Status = BookingStatus.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
 
-        _db.Bookings.Add(booking);
+            booking.BookingServices = masterServices.Select(ms => new Domain.Entities.BookingService
+            {
+                Id = Guid.NewGuid(),
+                BookingId = booking.Id,
+                MasterServiceId = ms.Id,
+                Price = ms.Price,
+                DurationMinutes = ms.DurationMinutes,
+            }).ToList();
 
-        if (master.AutoApproveBookings)
-        {
-            booking.Status = BookingStatus.Confirmed;
-            booking.UpdatedAt = DateTime.UtcNow;
+            _db.Bookings.Add(booking);
+
+            if (master.AutoApproveBookings)
+            {
+                booking.Status = BookingStatus.Confirmed;
+                booking.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            activity?.SetTag("booking.id", booking.Id.ToString());
+            activity?.SetTag("booking.status", booking.Status.ToString());
+            activity?.SetTag("booking.total_price", totalPrice);
+            _logger.LogInformation("Booking created BookingId={BookingId} Status={Status} Price={Price}",
+                booking.Id, booking.Status, totalPrice);
+
+            if (master.AutoApproveBookings)
+                await _notifications.SendBookingConfirmedAsync(booking.Id);
+            else
+                await _notifications.SendBookingPendingApprovalAsync(booking.Id);
+
+            var created = await _db.Bookings
+                .Include(b => b.Salon)
+                .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
+                .FirstAsync(b => b.Id == booking.Id);
+
+            var createdNames = await GetMasterNamesAsync([created.MasterId]);
+            return (MapToDto(created, createdNames.GetValueOrDefault(created.MasterId, "")), null);
         }
-
-        await _db.SaveChangesAsync();
-
-        if (master.AutoApproveBookings)
-            await _notifications.SendBookingConfirmedAsync(booking.Id);
-        else
-            await _notifications.SendBookingPendingApprovalAsync(booking.Id);
-
-        var created = await _db.Bookings
-            .Include(b => b.Salon)
-            .Include(b => b.BookingServices).ThenInclude(bs => bs.MasterService).ThenInclude(ms => ms.Service)
-            .FirstAsync(b => b.Id == booking.Id);
-
-        var createdNames = await GetMasterNamesAsync([created.MasterId]);
-        return (MapToDto(created, createdNames.GetValueOrDefault(created.MasterId, "")), null);
+        catch (DbUpdateException)
+        {
+            // Serialization failure or unique constraint violation — another booking took the slot
+            return (null, "The requested time slot is no longer available. Please choose another time.");
+        }
     }
 
     public async Task<(BookingDto? result, string? error)> ConfirmAsync(Guid id)
@@ -192,8 +226,8 @@ public class BookingService
         if (booking == null) return (null, "Booking not found");
         if (booking.Status != BookingStatus.Confirmed) return (null, "Only confirmed bookings can be completed");
 
-        var bookingEnd = booking.BookingDate.ToDateTime(booking.EndTime, DateTimeKind.Utc);
-        if (DateTime.UtcNow < bookingEnd) return (null, "Cannot complete a booking before its end time");
+        var bookingEnd = booking.BookingDate.ToDateTime(booking.EndTime);
+        if (LocalNow < bookingEnd) return (null, "Cannot complete a booking before its end time");
 
         booking.Status = BookingStatus.Completed;
         booking.CompletedAt = DateTime.UtcNow;
@@ -213,7 +247,8 @@ public class BookingService
         if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Confirmed)
             return (null, "Only pending or confirmed bookings can be cancelled");
 
-        var side = req.Side == "Master" ? CancellationSide.Master : CancellationSide.Client;
+        var side = string.Equals(req.Side, "Master", StringComparison.OrdinalIgnoreCase)
+            ? CancellationSide.Master : CancellationSide.Client;
         booking.Status = side == CancellationSide.Master ? BookingStatus.CancelledByMaster : BookingStatus.CancelledByClient;
         booking.CancelledAt = DateTime.UtcNow;
         booking.CancellationReason = req.Reason;

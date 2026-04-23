@@ -48,7 +48,6 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("ClientPhone")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
@@ -405,18 +404,14 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AccentColor")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<string>("Address")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("BorderRadius")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<string>("CoverPicture")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -428,22 +423,10 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("LogoUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Photos")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("PrimaryColor")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Slug")
                         .HasMaxLength(100)
@@ -451,10 +434,6 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Videos")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
 
                     b.Property<string>("WorkingDays")
                         .IsRequired()
@@ -494,16 +473,6 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SalonId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("WorkingDays")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<TimeOnly>("WorkingHoursEnd")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("WorkingHoursStart")
-                        .HasColumnType("time without time zone");
-
                     b.HasKey("Id");
 
                     b.HasIndex("MasterId");
@@ -542,36 +511,6 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Services");
-                });
-
-            modelBuilder.Entity("BeautySalonBooking.Domain.Entities.TimeSlot", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<TimeOnly>("EndTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<Guid>("SalonMasterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<TimeOnly>("StartTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SalonMasterId", "Date", "StartTime")
-                        .IsUnique();
-
-                    b.ToTable("TimeSlots");
                 });
 
             modelBuilder.Entity("BeautySalonBooking.Infrastructure.Entities.AppUser", b =>
@@ -983,17 +922,6 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.Navigation("Salon");
                 });
 
-            modelBuilder.Entity("BeautySalonBooking.Domain.Entities.TimeSlot", b =>
-                {
-                    b.HasOne("BeautySalonBooking.Domain.Entities.SalonMaster", "SalonMaster")
-                        .WithMany("TimeSlots")
-                        .HasForeignKey("SalonMasterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SalonMaster");
-                });
-
             modelBuilder.Entity("BeautySalonBooking.Infrastructure.Entities.RefreshToken", b =>
                 {
                     b.HasOne("BeautySalonBooking.Infrastructure.Entities.AppUser", "User")
@@ -1098,8 +1026,6 @@ namespace BeautySalonBooking.Infrastructure.Persistence.Migrations
                     b.Navigation("DateOverrides");
 
                     b.Navigation("TimeOffs");
-
-                    b.Navigation("TimeSlots");
 
                     b.Navigation("WeeklySlots");
                 });

@@ -195,20 +195,20 @@ public class SalonAdminService
             if (existing.IsActive) return (false, "Master already linked to this salon");
             existing.IsActive = true;
             await _db.SaveChangesAsync();
+            await EnsureWeeklySlotsAsync(existing.Id, salon);
             return (true, null);
         }
 
-        _db.SalonMasters.Add(new Domain.Entities.SalonMaster
+        var sm = new Domain.Entities.SalonMaster
         {
             Id = Guid.NewGuid(),
             SalonId = salonId,
             MasterId = masterId,
-            WorkingHoursStart = salon.WorkingHoursStart,
-            WorkingHoursEnd = salon.WorkingHoursEnd,
-            WorkingDays = salon.WorkingDays.ToList(),
             IsActive = true,
-        });
+        };
+        _db.SalonMasters.Add(sm);
         await _db.SaveChangesAsync();
+        await EnsureWeeklySlotsAsync(sm.Id, salon);
         return (true, null);
     }
 
@@ -238,20 +238,41 @@ public class SalonAdminService
 
         if (!linkExists)
         {
-            _db.SalonMasters.Add(new Domain.Entities.SalonMaster
+            var sm = new Domain.Entities.SalonMaster
             {
                 Id = Guid.NewGuid(),
                 SalonId = salonId,
                 MasterId = master!.Id,
-                WorkingHoursStart = salon.WorkingHoursStart,
-                WorkingHoursEnd = salon.WorkingHoursEnd,
-                WorkingDays = salon.WorkingDays.ToList(),
                 IsActive = true,
-            });
+            };
+            _db.SalonMasters.Add(sm);
             await _db.SaveChangesAsync();
+            await EnsureWeeklySlotsAsync(sm.Id, salon);
         }
 
         return (master, null);
+    }
+
+    /// <summary>
+    /// Auto-create MasterWeeklySlot rows from the salon's schedule
+    /// if no weekly slots exist yet for this salon-master link.
+    /// </summary>
+    private async Task EnsureWeeklySlotsAsync(Guid salonMasterId, Domain.Entities.Salon salon)
+    {
+        var hasSlots = await _db.MasterWeeklySlots.AnyAsync(w => w.SalonMasterId == salonMasterId);
+        if (hasSlots) return;
+
+        var slots = salon.WorkingDays.Select(day => new Domain.Entities.MasterWeeklySlot
+        {
+            Id = Guid.NewGuid(),
+            SalonMasterId = salonMasterId,
+            DayOfWeek = day,
+            StartTime = salon.WorkingHoursStart,
+            EndTime = salon.WorkingHoursEnd,
+        }).ToList();
+
+        _db.MasterWeeklySlots.AddRange(slots);
+        await _db.SaveChangesAsync();
     }
 
     /// <summary>Remove a master from the salon (unlink SalonMaster, does not delete the master)</summary>

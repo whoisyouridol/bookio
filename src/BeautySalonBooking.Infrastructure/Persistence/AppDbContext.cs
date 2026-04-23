@@ -15,8 +15,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<SalonMaster> SalonMasters => Set<SalonMaster>();
     public DbSet<Domain.Entities.Service> Services => Set<Domain.Entities.Service>();
     public DbSet<MasterService> MasterServices => Set<MasterService>();
-    public DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
-    public DbSet<Booking> Bookings => Set<Booking>();
+public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<BookingService> BookingServices => Set<BookingService>();
     public DbSet<MasterRating> MasterRatings => Set<MasterRating>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

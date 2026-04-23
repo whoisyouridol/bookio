@@ -20,7 +20,7 @@ public static class TestData
         {
             Id = Guid.NewGuid(), Name = name, Address = "123 Test St",
             WorkingHoursStart = new TimeOnly(9, 0), WorkingHoursEnd = new TimeOnly(21, 0),
-            WorkingDays = WeekDays, Photos = [], Videos = [],
+            WorkingDays = WeekDays,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         };
         db.Salons.Add(salon);
@@ -46,10 +46,26 @@ public static class TestData
         var sm = new SalonMaster
         {
             Id = Guid.NewGuid(), SalonId = salonId, MasterId = masterId,
-            WorkingHoursStart = new TimeOnly(9, 0), WorkingHoursEnd = new TimeOnly(18, 0),
-            WorkingDays = WeekDays
         };
         db.SalonMasters.Add(sm);
+        await db.SaveChangesAsync();
+        return sm;
+    }
+
+    /// <summary>Link a master and auto-create weekly slots from the salon's schedule.</summary>
+    public static async Task<SalonMaster> LinkMasterWithSlotsAsync(AppDbContext db, Guid salonId, Guid masterId)
+    {
+        var sm = await LinkMasterAsync(db, salonId, masterId);
+        var salon = await db.Salons.FindAsync(salonId);
+        var slots = salon!.WorkingDays.Select(day => new MasterWeeklySlot
+        {
+            Id = Guid.NewGuid(),
+            SalonMasterId = sm.Id,
+            DayOfWeek = day,
+            StartTime = salon.WorkingHoursStart,
+            EndTime = salon.WorkingHoursEnd,
+        }).ToList();
+        db.MasterWeeklySlots.AddRange(slots);
         await db.SaveChangesAsync();
         return sm;
     }
@@ -77,26 +93,6 @@ public static class TestData
         db.MasterServices.Add(ms);
         await db.SaveChangesAsync();
         return ms;
-    }
-
-    public static async Task<List<TimeSlot>> CreateSlotsAsync(AppDbContext db, Guid salonMasterId,
-        DateOnly date, TimeOnly from, TimeOnly to, int slotMinutes = 60)
-    {
-        var slots = new List<TimeSlot>();
-        var cur = from;
-        while (cur.AddMinutes(slotMinutes) <= to)
-        {
-            slots.Add(new TimeSlot
-            {
-                Id = Guid.NewGuid(), SalonMasterId = salonMasterId,
-                Date = date, StartTime = cur, EndTime = cur.AddMinutes(slotMinutes),
-                Status = TimeSlotStatus.Available
-            });
-            cur = cur.AddMinutes(slotMinutes);
-        }
-        db.TimeSlots.AddRange(slots);
-        await db.SaveChangesAsync();
-        return slots;
     }
 
     public static async Task<Booking> CreateBookingAsync(AppDbContext db, Guid salonId, Guid masterId,

@@ -10,6 +10,7 @@ public class NotificationJobProcessor
 {
     private readonly AppDbContext _db;
     private readonly IEmailSender _emailSender;
+    private readonly ISmsSender _smsSender;
     private readonly ILogger<NotificationJobProcessor> _logger;
 
     private const int MaxAttempts = 3;
@@ -17,10 +18,12 @@ public class NotificationJobProcessor
     public NotificationJobProcessor(
         AppDbContext db,
         IEmailSender emailSender,
+        ISmsSender smsSender,
         ILogger<NotificationJobProcessor> logger)
     {
         _db = db;
         _emailSender = emailSender;
+        _smsSender = smsSender;
         _logger = logger;
     }
 
@@ -62,14 +65,27 @@ public class NotificationJobProcessor
             }
         }
 
-        // SMS channel (stub)
+        // SMS channel
         if (notification.Channel is NotificationChannel.Sms or NotificationChannel.Both)
         {
-            _logger.LogInformation("SMS delivery not implemented — notification {Id}, phone {Phone}",
-                notificationId, notification.RecipientPhone);
-            // For SMS-only notifications, treat as success so they don't block
-            if (notification.Channel == NotificationChannel.Sms)
-                success = true;
+            if (!string.IsNullOrEmpty(notification.RecipientPhone)
+                && !string.IsNullOrEmpty(notification.Body))
+            {
+                var smsResult = await _smsSender.SendSmsAsync(
+                    notification.RecipientPhone, notification.Body);
+                // For SMS-only, this is the sole success indicator
+                if (notification.Channel == NotificationChannel.Sms)
+                    success = smsResult;
+                // For Both, email success already set; SMS failure is logged but doesn't override
+                else if (!smsResult)
+                    _logger.LogWarning("SMS delivery failed for notification {Id}", notificationId);
+            }
+            else
+            {
+                _logger.LogWarning("Notification {Id} missing SMS fields — skipping SMS", notificationId);
+                if (notification.Channel == NotificationChannel.Sms)
+                    success = false;
+            }
         }
 
         if (success)

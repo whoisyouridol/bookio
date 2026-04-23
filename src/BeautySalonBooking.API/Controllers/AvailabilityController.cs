@@ -1,4 +1,4 @@
-using BeautySalonBooking.Application.DTOs;
+ using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Infrastructure.ApplicationServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

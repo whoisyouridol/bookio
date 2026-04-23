@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { uploadMedia, resolveMediaUrl } from '@/api/media';
+import { uploadMedia, deleteMedia, resolveMediaUrl } from '@/api/media';
 import { toast } from 'sonner';
 
 type AcceptType = 'image' | 'video' | 'image+video';
@@ -41,7 +41,13 @@ export function DragDropUpload({ folder, accept = 'image', maxFiles = 10, values
     setUploading(true);
     try {
       const results = await Promise.all(toUpload.map(f => uploadMedia(f, folder)));
-      onChange(replace ? results.map(r => r.key) : [...values, ...results.map(r => r.key)]);
+      if (replace) {
+        // Delete old file(s) from storage before swapping reference
+        await Promise.all(values.map(k => deleteMedia(k).catch(() => {})));
+        onChange(results.map(r => r.key));
+      } else {
+        onChange([...values, ...results.map(r => r.key)]);
+      }
     } catch {
       toast.error(t('components.dragDrop.uploadFailed'));
     } finally {

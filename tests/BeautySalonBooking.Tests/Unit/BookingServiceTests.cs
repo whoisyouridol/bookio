@@ -6,6 +6,7 @@ using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Tests.Unit.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace BeautySalonBooking.Tests.Unit;
@@ -26,7 +27,8 @@ public class BookingServiceTests
     private BookingService BuildService(AppDbContext db)
     {
         var availability = new AvailabilityService(db, new ConfigurationBuilder().Build());
-        return new BookingService(db, availability, _notifMock.Object, new ConfigurationBuilder().Build());
+        var logger = new Mock<ILogger<BookingService>>().Object;
+        return new BookingService(db, availability, _notifMock.Object, new ConfigurationBuilder().Build(), logger);
     }
 
     private BookingService BuildService(InMemoryDbHelper.Ctx ctx) => BuildService(ctx.Db);
@@ -45,12 +47,11 @@ public class BookingServiceTests
 
         var salon = await TestData.CreateSalonAsync(ctx.Db);
         var master = await TestData.CreateMasterAsync(ctx.Db, autoApproveBookings: autoApprove);
-        var sm = await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id);
+        var sm = await TestData.LinkMasterWithSlotsAsync(ctx.Db, salon.Id, master.Id);
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, price: 1500, duration: 60);
 
-        // Pick a future Monday — within SalonMaster.WorkingDays
-        // SalonMaster has WorkingHoursStart=09:00, WorkingHoursEnd=18:00
+        // Pick a future Monday — within MasterWeeklySlot schedule (09:00-21:00 Mon-Fri from salon defaults)
         var date = NextMonday();
         var start = new TimeOnly(10, 0);
 
@@ -130,7 +131,7 @@ public class BookingServiceTests
         var svc = BuildService(ctx);
         var salon = await TestData.CreateSalonAsync(ctx.Db);
         var master = await TestData.CreateMasterAsync(ctx.Db);
-        await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id);
+        await TestData.LinkMasterWithSlotsAsync(ctx.Db, salon.Id, master.Id);
         var s1 = await TestData.CreateServiceAsync(ctx.Db, "A");
         var s2 = await TestData.CreateServiceAsync(ctx.Db, "B");
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, s1.Id, price: 1000, duration: 60);
@@ -175,13 +176,13 @@ public class BookingServiceTests
         var svc = BuildService(ctx);
         var salon = await TestData.CreateSalonAsync(ctx.Db);
         var master = await TestData.CreateMasterAsync(ctx.Db);
-        await TestData.LinkMasterAsync(ctx.Db, salon.Id, master.Id); // 09:00-18:00
+        await TestData.LinkMasterWithSlotsAsync(ctx.Db, salon.Id, master.Id); // 09:00-21:00
         var service = await TestData.CreateServiceAsync(ctx.Db);
         await TestData.AddMasterServiceAsync(ctx.Db, master.Id, service.Id, duration: 60);
 
-        // 20:00 is outside working hours (09:00-18:00)
+        // 22:00 is outside working hours (09:00-21:00 from salon defaults)
         var req = new CreateBookingRequest(salon.Id, master.Id, "Frank", "+70000000004", null,
-            "2026-03-09", "20:00", [service.Id]);
+            "2026-03-09", "22:00", [service.Id]);
 
         var (result, error) = await svc.CreateAsync(req);
 

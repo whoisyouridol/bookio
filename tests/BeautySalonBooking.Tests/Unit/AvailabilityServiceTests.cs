@@ -390,11 +390,11 @@ public class AvailabilityServiceTests
     }
 
     [Fact]
-    public async Task Resolve_NoSchedule_OmitsDay()
+    public async Task Resolve_NoSchedule_ReturnsEmpty()
     {
         var (_, svc, salon, master, _) = await SetupAsync();
 
-        // No weekly slots, no overrides — Tuesday has nothing
+        // No weekly slots, no overrides — Tuesday returns no availability
         var (result, _) = await svc.ResolveAsync(salon.Id, master.Id, "2026-03-17", "2026-03-17");
 
         result.Should().BeEmpty();

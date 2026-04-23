@@ -29,3 +29,7 @@ export async function uploadMedia(
   });
   return data;
 }
+
+export async function deleteMedia(key: string): Promise<void> {
+  await apiClient.delete(`/media/${key}`);
+}

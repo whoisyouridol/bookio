@@ -1,0 +1,18 @@
+[    3108ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://localhost/grafana/:0
+[    3573ms] [WARNING] Deprecation warning: value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.
+Arguments: 
+[0] _isAMomentObject: true, _isUTC: false, _useUTC: false, _l: undefined, _i: Mon, 30 Mar 2026 16:22:31, _f: undefined, _strict: undefined, _locale: [object Object]
+Error
+    at a.createFromInputFallback (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:3)
+    at an (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:25647)
+    at un (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:29355)
+    at aa (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:29221)
+    at on (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:28938)
+    at sa (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:29715)
+    at A (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:624:29748)
+    at a (https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:621:89)
+    at g (https://localhost/grafana/public/build/4570.87a4acc6d9144f9ee50a.js:1:29662)
+    at g (https://localhost/grafana/public/build/4570.87a4acc6d9144f9ee50a.js:5988:61915) @ https://localhost/grafana/public/build/6029.0549a3fcb50e73c4b256.js:620
+[    4173ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ https://localhost/assets/index-DJXdOjYK.js:57
+[    4323ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://localhost/api/auth/refresh:0
+[    4688ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://localhost/favicon.svg:0

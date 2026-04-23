@@ -2,6 +2,7 @@ using BeautySalonBooking.Application.DTOs;
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Domain.Services;
+using BeautySalonBooking.Infrastructure.Observability;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +34,11 @@ public class AvailabilityService
     {
         if (!DateOnly.TryParse(dateStr, out var date))
             return (null, "Invalid date format. Use YYYY-MM-DD");
+
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == salonId && s.IsActive);
+        if (salon == null) return (null, "Salon not found");
+        if (!salon.WorkingDays.Contains(date.DayOfWeek))
+            return ([], null); // Salon closed on this day — return empty slots, not error
 
         var sm = await FindSalonMaster(salonId, masterId);
         if (sm == null) return (null, "Salon-master link not found");
@@ -88,12 +94,25 @@ public class AvailabilityService
     public async Task<(bool available, string? error)> ValidateBookingSlotAsync(
         Guid salonId, Guid masterId, DateOnly date, TimeOnly startTime, TimeOnly endTime)
     {
+        using var activity = Telemetry.Source.StartActivity("Availability.Validate");
+        activity?.SetTag("availability.salon_id", salonId.ToString());
+        activity?.SetTag("availability.master_id", masterId.ToString());
+        activity?.SetTag("availability.date", date.ToString());
+        activity?.SetTag("availability.start", startTime.ToString());
+        activity?.SetTag("availability.end", endTime.ToString());
+
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == salonId && s.IsActive);
+        if (salon == null) return (false, "Salon not found");
+        if (!salon.WorkingDays.Contains(date.DayOfWeek))
+            return (false, "The salon is closed on this day");
+
         var sm = await FindSalonMaster(salonId, masterId);
         if (sm == null) return (false, "Salon-master link not found");
 
         var dayInput = await BuildDayScheduleAsync(sm.Id, salonId, masterId, date);
         var available = IsRangeAvailable(dayInput, startTime, endTime);
 
+        activity?.SetTag("availability.result", available);
         return (available, available ? null : "The requested time slot is not available");
     }
 
@@ -123,35 +142,9 @@ public class AvailabilityService
             .Select(b => new { b.StartTime, b.EndTime })
             .ToListAsync();
 
-        // If no availability rules configured, fall back to SalonMaster legacy fields
-        List<TimeRange> weeklyWindows;
-        if (weeklySlots.Count > 0)
-        {
-            weeklyWindows = weeklySlots
-                .Select(w => new TimeRange(w.StartTime, w.EndTime))
-                .ToList();
-        }
-        else
-        {
-            // Legacy fallback: check if ANY weekly slots exist for this salon-master
-            var hasAnyWeeklySlots = await _db.MasterWeeklySlots
-                .AnyAsync(w => w.SalonMasterId == salonMasterId);
-
-            if (hasAnyWeeklySlots)
-            {
-                // Master has weekly rules but not for this day → they don't work
-                weeklyWindows = [];
-            }
-            else
-            {
-                // No rules at all → fall back to SalonMaster.WorkingHoursStart/End/WorkingDays
-                var sm = await _db.SalonMasters.FirstAsync(x => x.Id == salonMasterId);
-                if (sm.WorkingDays.Contains(date.DayOfWeek))
-                    weeklyWindows = [new TimeRange(sm.WorkingHoursStart, sm.WorkingHoursEnd)];
-                else
-                    weeklyWindows = [];
-            }
-        }
+        var weeklyWindows = weeklySlots
+            .Select(w => new TimeRange(w.StartTime, w.EndTime))
+            .ToList();
 
         return new DayScheduleInput
         {
@@ -492,6 +485,7 @@ public class AvailabilityService
                     .ToList();
                 result.Add(new ResolvedDayAvailability(d.ToString("yyyy-MM-dd"), "weekly", windows));
             }
+            // No weekly slots for this day → master doesn't work this day
         }
 
         return (result, null);

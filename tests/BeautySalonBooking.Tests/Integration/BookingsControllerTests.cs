@@ -37,9 +37,7 @@ public class BookingsControllerTests : IntegrationTestBase
         await PostAsync<JsonElement>($"/api/masters/{masterId}/services",
             new { serviceId, price = 2000, durationMinutes = 60 });
 
-        await PostAsync<JsonElement>($"/api/salons/{salonId}/masters/{masterId}/slots/generate",
-            new { startDate = date, endDate = date, slotDurationMinutes = 60 });
-
+        // No need to generate legacy slots — availability is computed on-the-fly
         return (salonId, masterId, serviceId);
     }
 

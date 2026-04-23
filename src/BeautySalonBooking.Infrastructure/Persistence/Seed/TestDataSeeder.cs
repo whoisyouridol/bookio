@@ -145,14 +145,14 @@ public static class TestDataSeeder
                 Id = SlnGlow, Name = "Glow Beauty Studio", Slug = "glow", IsActive = true,
                 Address = "742 Market St, San Francisco, CA 94102",
                 WorkingHoursStart = new TimeOnly(9, 0), WorkingHoursEnd = new TimeOnly(21, 0),
-                WorkingDays = monSat, Photos = [], Videos = [], CreatedAt = now, UpdatedAt = now,
+                WorkingDays = monSat, CreatedAt = now, UpdatedAt = now,
             },
             new Salon
             {
                 Id = SlnLuxe, Name = "Luxe Hair & Nails", Slug = "luxe", IsActive = true,
                 Address = "1280 Lexington Ave, New York, NY 10028",
                 WorkingHoursStart = new TimeOnly(10, 0), WorkingHoursEnd = new TimeOnly(20, 0),
-                WorkingDays = monFri, Photos = [], Videos = [], CreatedAt = now, UpdatedAt = now,
+                WorkingDays = monFri, CreatedAt = now, UpdatedAt = now,
             },
             new Salon
             {
@@ -160,7 +160,7 @@ public static class TestDataSeeder
                 Id = SlnZen, Name = "Zen Spa & Wellness", Slug = "zen", IsActive = false,
                 Address = "500 Pine St, Seattle, WA 98101",
                 WorkingHoursStart = new TimeOnly(10, 0), WorkingHoursEnd = new TimeOnly(18, 0),
-                WorkingDays = monFri, Photos = [], Videos = [], CreatedAt = now, UpdatedAt = now,
+                WorkingDays = monFri, CreatedAt = now, UpdatedAt = now,
             },
         });
 
@@ -244,18 +244,18 @@ public static class TestDataSeeder
         // ── SalonMasters ──────────────────────────────────────────────────────
         var salonMasters = new[]
         {
-            // Ashley @ Glow: Mon-Fri 9-18 (split shift via weekly slots — see below)
-            new SalonMaster { Id = SmGlowAshley,  SalonId = SlnGlow, MasterId = MstAshley,  WorkingHoursStart = new TimeOnly(9,0),  WorkingHoursEnd = new TimeOnly(18,0), WorkingDays = monFri, IsActive = true },
-            // Jessica @ Glow: Mon-Sat 10-19
-            new SalonMaster { Id = SmGlowJessica, SalonId = SlnGlow, MasterId = MstJessica, WorkingHoursStart = new TimeOnly(10,0), WorkingHoursEnd = new TimeOnly(19,0), WorkingDays = monSat, IsActive = true },
-            // Lauren @ Glow: Mon-Sat 11-20, manual approve
-            new SalonMaster { Id = SmGlowLauren,  SalonId = SlnGlow, MasterId = MstLauren,  WorkingHoursStart = new TimeOnly(11,0), WorkingHoursEnd = new TimeOnly(20,0), WorkingDays = monSat, IsActive = true },
-            // Ashley @ Luxe: Saturday only 14-20 (cross-salon edge case)
-            new SalonMaster { Id = SmLuxeAshley,  SalonId = SlnLuxe, MasterId = MstAshley,  WorkingHoursStart = new TimeOnly(14,0), WorkingHoursEnd = new TimeOnly(20,0), WorkingDays = satOnly, IsActive = true },
-            // Lauren @ Luxe: Mon-Fri 10-18 (cross-salon edge case)
-            new SalonMaster { Id = SmLuxeLauren,  SalonId = SlnLuxe, MasterId = MstLauren,  WorkingHoursStart = new TimeOnly(10,0), WorkingHoursEnd = new TimeOnly(18,0), WorkingDays = monFri, IsActive = true },
-            // Sofia @ Zen (inactive salon): Mon-Fri 10-17
-            new SalonMaster { Id = SmZenSofia,    SalonId = SlnZen,  MasterId = MstSofia,   WorkingHoursStart = new TimeOnly(10,0), WorkingHoursEnd = new TimeOnly(17,0), WorkingDays = monFri, IsActive = true },
+            // Ashley @ Glow (split shift via weekly slots — see below)
+            new SalonMaster { Id = SmGlowAshley,  SalonId = SlnGlow, MasterId = MstAshley,  IsActive = true },
+            // Jessica @ Glow
+            new SalonMaster { Id = SmGlowJessica, SalonId = SlnGlow, MasterId = MstJessica, IsActive = true },
+            // Lauren @ Glow, manual approve
+            new SalonMaster { Id = SmGlowLauren,  SalonId = SlnGlow, MasterId = MstLauren,  IsActive = true },
+            // Ashley @ Luxe (cross-salon edge case)
+            new SalonMaster { Id = SmLuxeAshley,  SalonId = SlnLuxe, MasterId = MstAshley,  IsActive = true },
+            // Lauren @ Luxe (cross-salon edge case)
+            new SalonMaster { Id = SmLuxeLauren,  SalonId = SlnLuxe, MasterId = MstLauren,  IsActive = true },
+            // Sofia @ Zen (inactive salon)
+            new SalonMaster { Id = SmZenSofia,    SalonId = SlnZen,  MasterId = MstSofia,   IsActive = true },
         };
         await db.SalonMasters.AddRangeAsync(salonMasters);
 
@@ -294,6 +294,14 @@ public static class TestDataSeeder
         // Lauren@Glow: Mon-Sat full shift 11-20
         foreach (var day in monSat)
             weeklySlots.Add(new MasterWeeklySlot { Id = Guid.NewGuid(), SalonMasterId = SmGlowLauren, DayOfWeek = day, StartTime = new TimeOnly(11, 0), EndTime = new TimeOnly(20, 0) });
+        // Ashley@Luxe: Saturday only 14-20 (cross-salon edge case)
+        weeklySlots.Add(new MasterWeeklySlot { Id = Guid.NewGuid(), SalonMasterId = SmLuxeAshley, DayOfWeek = DayOfWeek.Saturday, StartTime = new TimeOnly(14, 0), EndTime = new TimeOnly(20, 0) });
+        // Lauren@Luxe: Mon-Fri 10-18 (cross-salon edge case)
+        foreach (var day in monFri)
+            weeklySlots.Add(new MasterWeeklySlot { Id = Guid.NewGuid(), SalonMasterId = SmLuxeLauren, DayOfWeek = day, StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(18, 0) });
+        // Sofia@Zen: Mon-Fri 10-17 (inactive salon)
+        foreach (var day in monFri)
+            weeklySlots.Add(new MasterWeeklySlot { Id = Guid.NewGuid(), SalonMasterId = SmZenSofia, DayOfWeek = day, StartTime = new TimeOnly(10, 0), EndTime = new TimeOnly(17, 0) });
         await db.MasterWeeklySlots.AddRangeAsync(weeklySlots);
 
         // ── MasterDateOverrides ───────────────────────────────────────────────
@@ -489,54 +497,6 @@ public static class TestDataSeeder
             new MasterRating { Id = RtgLaurenStdalone,  MasterId = MstLauren,  BookingId = null, ClientName = "Nicole B.",    Rating = 5, Comment = "Lauren is a true professional. Highly recommend to anyone!",           CreatedAt = now.AddDays(-6) },
         });
 
-        // ── TimeSlots (next 28 days, 15-min granularity) ──────────────────────
-        var timeSlots = new List<TimeSlot>();
-        var slotSchedules = new[]
-        {
-            (smId: SmGlowAshley,  days: monFri, start: new TimeOnly(9,0),  end: new TimeOnly(18,0)),
-            (smId: SmGlowJessica, days: monSat, start: new TimeOnly(10,0), end: new TimeOnly(19,0)),
-            (smId: SmGlowLauren,  days: monSat, start: new TimeOnly(11,0), end: new TimeOnly(20,0)),
-            (smId: SmLuxeAshley,  days: satOnly, start: new TimeOnly(14,0), end: new TimeOnly(20,0)),
-            (smId: SmLuxeLauren,  days: monFri, start: new TimeOnly(10,0), end: new TimeOnly(18,0)),
-        };
-
-        for (var d = 1; d <= 28; d++)
-        {
-            var date = today.AddDays(d);
-            foreach (var sched in slotSchedules)
-            {
-                if (!sched.days.Contains(date.DayOfWeek)) continue;
-                // Skip Ashley@Glow on her day-off date
-                if (sched.smId == SmGlowAshley && date == futMon1) continue;
-
-                var t = sched.start;
-                while (t.AddMinutes(15) <= sched.end)
-                {
-                    timeSlots.Add(new TimeSlot
-                    {
-                        Id            = Guid.NewGuid(),
-                        SalonMasterId = sched.smId,
-                        Date          = date,
-                        StartTime     = t,
-                        EndTime       = t.AddMinutes(15),
-                        Status        = TimeSlotStatus.Available,
-                    });
-                    t = t.AddMinutes(15);
-                }
-            }
-        }
-
-        // Mark slots as Booked for future bookings
-        MarkSlotsBooked(timeSlots, SmGlowAshley,  futTue, new TimeOnly(9,0),  new TimeOnly(10,0));
-        MarkSlotsBooked(timeSlots, SmGlowJessica, futWed, new TimeOnly(10,0), new TimeOnly(11,30));
-        MarkSlotsBooked(timeSlots, SmGlowLauren,  futThu, new TimeOnly(11,0), new TimeOnly(12,0));
-        MarkSlotsBooked(timeSlots, SmLuxeAshley,  futSat, new TimeOnly(14,0), new TimeOnly(15,0));
-
-        // Mark some slots as Blocked (simulate maintenance / manual block)
-        MarkSlotsBlocked(timeSlots, SmGlowJessica, futWed, new TimeOnly(13,0), new TimeOnly(14,0));
-
-        await db.TimeSlots.AddRangeAsync(timeSlots);
-
         await db.SaveChangesAsync();
     }
 
@@ -557,9 +517,7 @@ public static class TestDataSeeder
         // Bookings
         await db.Bookings.Where(b => bookingIds.Contains(b.Id)).ExecuteDeleteAsync();
 
-        // TimeSlots for our SalonMasters
         var smIds = new[] { SmGlowAshley, SmGlowJessica, SmGlowLauren, SmLuxeAshley, SmLuxeLauren, SmZenSofia };
-        await db.TimeSlots.Where(ts => smIds.Contains(ts.SalonMasterId)).ExecuteDeleteAsync();
 
         // Time offs + date override slots + date overrides + weekly slots
         await db.MasterTimeOffs.Where(t => t.Id == ToffSofiaVacation).ExecuteDeleteAsync();
@@ -622,15 +580,4 @@ public static class TestDataSeeder
         return d;
     }
 
-    private static void MarkSlotsBooked(List<TimeSlot> slots, Guid smId, DateOnly date, TimeOnly start, TimeOnly end)
-    {
-        foreach (var slot in slots.Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime >= start && s.EndTime <= end))
-            slot.Status = TimeSlotStatus.Booked;
-    }
-
-    private static void MarkSlotsBlocked(List<TimeSlot> slots, Guid smId, DateOnly date, TimeOnly start, TimeOnly end)
-    {
-        foreach (var slot in slots.Where(s => s.SalonMasterId == smId && s.Date == date && s.StartTime >= start && s.EndTime <= end))
-            slot.Status = TimeSlotStatus.Blocked;
-    }
 }

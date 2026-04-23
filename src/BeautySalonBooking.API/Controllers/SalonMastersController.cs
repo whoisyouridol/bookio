@@ -14,20 +14,11 @@ public class SalonMastersController : ControllerBase
 
     public SalonMastersController(SalonMasterService service) => _service = service;
 
-    /// <summary>Link a master to a salon with schedule</summary>
+    /// <summary>Link a master to a salon (auto-creates weekly schedule from salon defaults)</summary>
     [HttpPost]
     public async Task<IActionResult> Link(Guid salonId, [FromBody] LinkMasterToSalonRequest req)
     {
         var (result, error) = await _service.LinkAsync(salonId, req);
-        if (error != null) return BadRequest(new { error });
-        return Ok(result);
-    }
-
-    /// <summary>Update master's schedule at this salon</summary>
-    [HttpPut("{masterId:guid}")]
-    public async Task<IActionResult> Update(Guid salonId, Guid masterId, [FromBody] UpdateSalonMasterRequest req)
-    {
-        var (result, error) = await _service.UpdateAsync(salonId, masterId, req);
         if (error != null) return BadRequest(new { error });
         return Ok(result);
     }

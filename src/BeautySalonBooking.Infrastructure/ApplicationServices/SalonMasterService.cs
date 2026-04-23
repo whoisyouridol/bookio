@@ -14,8 +14,8 @@ public class SalonMasterService
 
     public async Task<(SalonMasterDto? result, string? error)> LinkAsync(Guid salonId, LinkMasterToSalonRequest req)
     {
-        var salonExists = await _db.Salons.AnyAsync(s => s.Id == salonId && s.IsActive);
-        if (!salonExists) return (null, "Salon not found");
+        var salon = await _db.Salons.FirstOrDefaultAsync(s => s.Id == salonId && s.IsActive);
+        if (salon == null) return (null, "Salon not found");
 
         var masterExists = await _db.Masters.AnyAsync(m => m.Id == req.MasterId && !m.IsDeleted);
         if (!masterExists) return (null, "Master not found");
@@ -26,10 +26,8 @@ public class SalonMasterService
             if (existing.IsActive) return (null, "Master already linked to this salon");
             // Re-activate
             existing.IsActive = true;
-            existing.WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart);
-            existing.WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd);
-            existing.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
             await _db.SaveChangesAsync();
+            await EnsureWeeklySlotsAsync(existing.Id, salon);
             var user = await GetMasterUserAsync(req.MasterId);
             return (MapToDto(existing, user), null);
         }
@@ -39,31 +37,14 @@ public class SalonMasterService
             Id = Guid.NewGuid(),
             SalonId = salonId,
             MasterId = req.MasterId,
-            WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart),
-            WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd),
-            WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList(),
         };
         _db.SalonMasters.Add(sm);
         await _db.SaveChangesAsync();
 
+        await EnsureWeeklySlotsAsync(sm.Id, salon);
+
         var u2 = await GetMasterUserAsync(req.MasterId);
         return (MapToDto(sm, u2), null);
-    }
-
-    public async Task<(SalonMasterDto? result, string? error)> UpdateAsync(Guid salonId, Guid masterId, UpdateSalonMasterRequest req)
-    {
-        var sm = await _db.SalonMasters
-            .FirstOrDefaultAsync(x => x.SalonId == salonId && x.MasterId == masterId && x.IsActive);
-
-        if (sm == null) return (null, "Salon-master link not found");
-
-        sm.WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart);
-        sm.WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd);
-        sm.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
-        await _db.SaveChangesAsync();
-
-        var user = await GetMasterUserAsync(masterId);
-        return (MapToDto(sm, user), null);
     }
 
     public async Task<bool> UnlinkAsync(Guid salonId, Guid masterId)
@@ -84,12 +65,30 @@ public class SalonMasterService
             .ToListAsync();
 
         return links.Select(sm => new SalonMasterWithSalonDto(
-            sm.Id, sm.SalonId, sm.MasterId, sm.Salon.Name,
-            sm.WorkingHoursStart.ToString("HH:mm"),
-            sm.WorkingHoursEnd.ToString("HH:mm"),
-            sm.WorkingDays.Select(d => d.ToString()).ToList(),
-            sm.IsActive
+            sm.Id, sm.SalonId, sm.MasterId, sm.Salon.Name, sm.IsActive
         )).ToList();
+    }
+
+    /// <summary>
+    /// Auto-create MasterWeeklySlot rows from the salon's schedule
+    /// if no weekly slots exist yet for this salon-master link.
+    /// </summary>
+    internal async Task EnsureWeeklySlotsAsync(Guid salonMasterId, Salon salon)
+    {
+        var hasSlots = await _db.MasterWeeklySlots.AnyAsync(w => w.SalonMasterId == salonMasterId);
+        if (hasSlots) return;
+
+        var slots = salon.WorkingDays.Select(day => new MasterWeeklySlot
+        {
+            Id = Guid.NewGuid(),
+            SalonMasterId = salonMasterId,
+            DayOfWeek = day,
+            StartTime = salon.WorkingHoursStart,
+            EndTime = salon.WorkingHoursEnd,
+        }).ToList();
+
+        _db.MasterWeeklySlots.AddRange(slots);
+        await _db.SaveChangesAsync();
     }
 
     private async Task<AppUser?> GetMasterUserAsync(Guid masterId) =>
@@ -99,9 +98,6 @@ public class SalonMasterService
         sm.Id, sm.SalonId, sm.MasterId,
         user?.FirstName ?? string.Empty,
         user?.LastName ?? string.Empty,
-        sm.WorkingHoursStart.ToString("HH:mm"),
-        sm.WorkingHoursEnd.ToString("HH:mm"),
-        sm.WorkingDays.Select(d => d.ToString()).ToList(),
         sm.IsActive
     );
 }

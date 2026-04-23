@@ -29,6 +29,7 @@ export function bookingStatusBadge(status: string) {
     Completed: 'info',
     CancelledByClient: 'error',
     CancelledByMaster: 'error',
+    Expired: 'error',
   };
   return map[status] ?? 'default';
 }

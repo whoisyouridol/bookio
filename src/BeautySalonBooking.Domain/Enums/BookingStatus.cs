@@ -6,5 +6,6 @@ public enum BookingStatus
     Confirmed,
     Completed,
     CancelledByClient,
-    CancelledByMaster
+    CancelledByMaster,
+    Expired
 }

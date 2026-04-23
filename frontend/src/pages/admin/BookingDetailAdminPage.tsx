@@ -73,7 +73,7 @@ export default function BookingDetailAdminPage() {
           <p className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">{t('admin.bookingDetail.client')}</p>
           <div className="grid grid-cols-2 gap-4">
             <InfoPair label={t('admin.bookingDetail.name')} value={booking.clientName} />
-            <InfoPair label={t('admin.bookingDetail.phone')} value={booking.clientPhone} />
+            {booking.clientPhone && <InfoPair label={t('admin.bookingDetail.phone')} value={booking.clientPhone} />}
             {booking.clientEmail && <InfoPair label={t('admin.bookingDetail.email')} value={booking.clientEmail} />}
           </div>
         </div>

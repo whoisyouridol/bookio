@@ -60,6 +60,20 @@ public class MinioStorageService : IStorageService
         return key;
     }
 
+    public async Task DeleteAsync(string key, CancellationToken ct = default)
+    {
+        try
+        {
+            await _internal.RemoveObjectAsync(new RemoveObjectArgs()
+                .WithBucket(_opts.BucketName)
+                .WithObject(key), ct);
+        }
+        catch (MinioException)
+        {
+            // Object does not exist or already deleted — treat as success
+        }
+    }
+
     public async Task<(Stream stream, string contentType)> GetStreamAsync(string key, CancellationToken ct = default)
     {
         var ms = new MemoryStream();

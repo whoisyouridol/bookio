@@ -1,4 +1,4 @@
-import type { TimeSlotDto, GenerateSlotsRequest } from '@/types';
+import type { TimeSlotDto } from '@/types';
 import apiClient from './client';
 
 export const getAvailableSlots = (salonId: string, masterId: string, date: string, serviceIds: string[]) =>
@@ -6,6 +6,3 @@ export const getAvailableSlots = (salonId: string, masterId: string, date: strin
     params: { date, serviceIds },
     paramsSerializer: { indexes: null },
   }).then(r => r.data);
-
-export const generateSlots = (salonId: string, masterId: string, data: GenerateSlotsRequest) =>
-  apiClient.post(`/salons/${salonId}/masters/${masterId}/slots/generate`, data).then(r => r.data);

@@ -11,8 +11,11 @@ public class CreateBookingValidator : AbstractValidator<CreateBookingRequest>
         RuleFor(x => x.SalonId).NotEmpty();
         RuleFor(x => x.MasterId).NotEmpty();
         RuleFor(x => x.ClientName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.ClientPhone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.ClientPhone).MaximumLength(20).When(x => !string.IsNullOrEmpty(x.ClientPhone));
         RuleFor(x => x.ClientEmail).EmailAddress().When(x => !string.IsNullOrEmpty(x.ClientEmail));
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrEmpty(x.ClientPhone) || !string.IsNullOrEmpty(x.ClientEmail))
+            .WithMessage("At least one contact method (phone or email) is required");
         RuleFor(x => x.BookingDate).NotEmpty().Matches(@"^\d{4}-\d{2}-\d{2}$").WithMessage("Use YYYY-MM-DD format");
         RuleFor(x => x.BookingDate)
             .NotEmpty()

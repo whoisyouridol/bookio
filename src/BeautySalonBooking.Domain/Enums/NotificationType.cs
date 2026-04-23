@@ -8,6 +8,8 @@ public enum NotificationType
     BookingCancelled,
     BookingCompleted,
     BookingPendingApproval,
+    BookingApprovalReminder,
+    BookingExpired,
     PasswordReset,
     PasswordChanged,
     AccountCredentials

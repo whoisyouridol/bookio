@@ -10,7 +10,7 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     {
         builder.HasKey(b => b.Id);
         builder.Property(b => b.ClientName).IsRequired().HasMaxLength(200);
-        builder.Property(b => b.ClientPhone).IsRequired().HasMaxLength(20);
+        builder.Property(b => b.ClientPhone).HasMaxLength(20);
         builder.Property(b => b.ClientEmail).HasMaxLength(200);
         builder.Property(b => b.TotalPrice).HasColumnType("numeric(18,2)");
         builder.Property(b => b.Status).HasConversion<string>();

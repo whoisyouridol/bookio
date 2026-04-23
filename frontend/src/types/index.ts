@@ -10,12 +10,7 @@ export interface SalonDto {
   workingHoursStart: string;
   workingHoursEnd: string;
   workingDays: string[];
-  photos: string[];
-  videos: string[];
-  primaryColor?: string;
-  accentColor?: string;
-  borderRadius?: string;
-  logoUrl?: string;
+  coverPicture?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -33,12 +28,7 @@ export interface CreateSalonRequest {
   workingHoursStart: string;
   workingHoursEnd: string;
   workingDays: string[];
-  photos?: string[];
-  videos?: string[];
-  primaryColor?: string;
-  accentColor?: string;
-  borderRadius?: string;
-  logoUrl?: string;
+  coverPicture?: string;
 }
 
 export type UpdateSalonRequest = CreateSalonRequest;
@@ -92,9 +82,6 @@ export interface SalonMasterDto {
   masterId: string;
   masterFirstName: string;
   masterLastName: string;
-  workingHoursStart: string;
-  workingHoursEnd: string;
-  workingDays: string[];
   isActive: boolean;
 }
 
@@ -103,23 +90,11 @@ export interface SalonMasterWithSalonDto {
   salonId: string;
   masterId: string;
   salonName: string;
-  workingHoursStart: string;
-  workingHoursEnd: string;
-  workingDays: string[];
   isActive: boolean;
 }
 
 export interface LinkMasterToSalonRequest {
   masterId: string;
-  workingHoursStart: string;
-  workingHoursEnd: string;
-  workingDays: string[];
-}
-
-export interface UpdateSalonMasterRequest {
-  workingHoursStart: string;
-  workingHoursEnd: string;
-  workingDays: string[];
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────
@@ -179,13 +154,7 @@ export interface TimeSlotDto {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'Available' | 'Booked' | 'Blocked';
-}
-
-export interface GenerateSlotsRequest {
-  startDate: string;
-  endDate: string;
-  slotDurationMinutes: number;
+  status: string;
 }
 
 // ── Booking ───────────────────────────────────────────────────────────────────
@@ -205,7 +174,7 @@ export interface BookingDto {
   masterId: string;
   masterName: string;
   clientName: string;
-  clientPhone: string;
+  clientPhone?: string;
   clientEmail?: string;
   bookingDate: string;
   startTime: string;
@@ -224,7 +193,7 @@ export interface CreateBookingRequest {
   salonId: string;
   masterId: string;
   clientName: string;
-  clientPhone: string;
+  clientPhone?: string;
   clientEmail?: string;
   bookingDate: string;
   startTime: string;
@@ -357,22 +326,6 @@ export interface SalonAdminMasterDto {
   ratingCount: number;
   servicesCount: number;
   createdAt: string;
-}
-
-// ── Theme ─────────────────────────────────────────────────────────────────────
-
-export interface SalonTheme {
-  primary: string;
-  primaryDark: string;
-  primaryLight: string;
-  accent: string;
-  background: string;
-  surface: string;
-  text: string;
-  textSecondary: string;
-  border: string;
-  fontFamily: string;
-  borderRadius: string;
 }
 
 // ── Availability ─────────────────────────────────────────────────────────────

@@ -1,0 +1,30 @@
+{
+  "bookingPendingApproval": {
+    "toMaster": "ახალი ჯავშანი: {salonName}, {date} {time}"
+  },
+  "bookingConfirmed": {
+    "toClient": "ჯავშანი დადასტურდა: {salonName}, {date} {time}"
+  },
+  "bookingCancelledByClient": {
+    "toMaster": "კლიენტმა გააუქმა: {salonName}, {date} {time}"
+  },
+  "bookingCancelledByMaster": {
+    "toClient": "მასტერმა გააუქმა: {salonName}, {date} {time}"
+  },
+  "bookingCompleted": {
+    "toClient": "ვიზიტი დასრულდა. მადლობა! — {salonName}"
+  },
+  "bookingApprovalReminder": {
+    "toMaster": "შეხსენება: დაადასტურეთ ჯავშანი — {date} {time}"
+  },
+  "bookingExpired": {
+    "toClient": "ჯავშანი გაუქმდა: მასტერმა არ დაადასტურა — {salonName}",
+    "toMaster": "ჯავშანი ვადაგასულია: {date} {time}, {salonName}"
+  },
+  "reminder24h": {
+    "toClient": "შეხსენება: ხვალ {time}, {salonName}"
+  },
+  "reminder3h": {
+    "toClient": "შეხსენება: 3 საათში, {time}, {salonName}"
+  }
+}

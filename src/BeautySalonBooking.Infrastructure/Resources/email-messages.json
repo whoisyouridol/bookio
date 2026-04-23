@@ -41,6 +41,20 @@
     "kaMessage": "გახსოვდეთ, რომ ხვალ გაქვთ დაჯავშნილი ვიზიტი.",
     "enMessage": "This is a friendly reminder that your appointment is tomorrow."
   },
+  "bookingApprovalReminder": {
+    "subject": "შეხსენება: ჯავშანი ელოდება დადასტურებას / Reminder: Booking awaits your confirmation",
+    "kaTitle": "ჯავშანი ელოდება დადასტურებას",
+    "enTitle": "Booking Awaits Confirmation",
+    "kaMessage": "თქვენ გაქვთ დაუდასტურებელი ჯავშანი. გთხოვთ, დაადასტუროთ ან გააუქმოთ 3 საათის განმავლობაში, წინააღმდეგ შემთხვევაში ჯავშანი ავტომატურად გაუქმდება.",
+    "enMessage": "You have an unconfirmed booking. Please confirm or decline within 3 hours, otherwise the booking will be automatically cancelled."
+  },
+  "bookingExpired": {
+    "subject": "ჯავშანი ვადაგასული / Booking expired — {salonName}",
+    "kaTitle": "ჯავშანი ვადაგასულია",
+    "enTitle": "Booking Expired",
+    "kaMessage": "ეს ჯავშანი ავტომატურად გაუქმდა, რადგან მასტერმა დროულად არ დაადასტურა.",
+    "enMessage": "This booking has been automatically cancelled because the master did not confirm it in time."
+  },
   "reminder3h": {
     "subject": "შეხსენება: ვიზიტი 3 საათში / Reminder: Your appointment is in 3 hours",
     "kaTitle": "შეხსენება — ვიზიტი 3 საათში",

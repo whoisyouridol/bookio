@@ -55,12 +55,7 @@ public class SalonService
             WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart),
             WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd),
             WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList(),
-            Photos = req.Photos ?? new(),
-            Videos = req.Videos ?? new(),
-            PrimaryColor = req.PrimaryColor,
-            AccentColor = req.AccentColor,
-            BorderRadius = req.BorderRadius,
-            LogoUrl = req.LogoUrl,
+            CoverPicture = req.CoverPicture,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -86,12 +81,7 @@ public class SalonService
         salon.WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart);
         salon.WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd);
         salon.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
-        salon.Photos = req.Photos ?? new();
-        salon.Videos = req.Videos ?? new();
-        salon.PrimaryColor = req.PrimaryColor;
-        salon.AccentColor = req.AccentColor;
-        salon.BorderRadius = req.BorderRadius;
-        salon.LogoUrl = req.LogoUrl;
+        salon.CoverPicture = req.CoverPicture;
         salon.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -121,9 +111,6 @@ public class SalonService
             sm.Id, sm.SalonId, sm.MasterId,
             userByMaster.GetValueOrDefault(sm.MasterId)?.FirstName ?? string.Empty,
             userByMaster.GetValueOrDefault(sm.MasterId)?.LastName ?? string.Empty,
-            sm.WorkingHoursStart.ToString("HH:mm"),
-            sm.WorkingHoursEnd.ToString("HH:mm"),
-            sm.WorkingDays.Select(d => d.ToString()).ToList(),
             sm.IsActive
         )).ToList();
     }
@@ -189,8 +176,7 @@ public class SalonService
         s.WorkingHoursStart.ToString("HH:mm"),
         s.WorkingHoursEnd.ToString("HH:mm"),
         s.WorkingDays.Select(d => d.ToString()).ToList(),
-        s.Photos, s.Videos,
-        s.PrimaryColor, s.AccentColor, s.BorderRadius, s.LogoUrl,
+        s.CoverPicture,
         s.IsActive, s.CreatedAt);
 
     private async Task<SalonDetailDto> MapToDetailDto(Salon salon)
@@ -202,9 +188,6 @@ public class SalonService
             sm.Id, sm.SalonId, sm.MasterId,
             userByMaster.GetValueOrDefault(sm.MasterId)?.FirstName ?? string.Empty,
             userByMaster.GetValueOrDefault(sm.MasterId)?.LastName ?? string.Empty,
-            sm.WorkingHoursStart.ToString("HH:mm"),
-            sm.WorkingHoursEnd.ToString("HH:mm"),
-            sm.WorkingDays.Select(d => d.ToString()).ToList(),
             sm.IsActive
         )).ToList();
 
@@ -214,8 +197,7 @@ public class SalonService
             salon.WorkingHoursStart.ToString("HH:mm"),
             salon.WorkingHoursEnd.ToString("HH:mm"),
             salon.WorkingDays.Select(d => d.ToString()).ToList(),
-            salon.Photos, salon.Videos,
-            salon.PrimaryColor, salon.AccentColor, salon.BorderRadius, salon.LogoUrl,
+            salon.CoverPicture,
             salon.IsActive, salon.CreatedAt, masters);
     }
 }

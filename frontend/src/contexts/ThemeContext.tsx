@@ -1,7 +1,20 @@
 import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
-import type { SalonTheme } from '@/types';
 
-const defaultTheme: SalonTheme = {
+interface ThemeColors {
+  primary: string;
+  primaryDark: string;
+  primaryLight: string;
+  accent: string;
+  background: string;
+  surface: string;
+  text: string;
+  textSecondary: string;
+  border: string;
+  fontFamily: string;
+  borderRadius: string;
+}
+
+const defaultTheme: ThemeColors = {
   primary: '#B8623A',
   primaryDark: '#9E5230',
   primaryLight: '#FBF0E8',
@@ -18,9 +31,6 @@ const defaultTheme: SalonTheme = {
 type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
-  theme: SalonTheme;
-  setTheme: (theme: SalonTheme) => void;
-  resetTheme: () => void;
   isDark: boolean;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
@@ -40,7 +50,6 @@ function getStoredMode(): ThemeMode {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<SalonTheme>(defaultTheme);
   const [themeMode, setThemeModeState] = useState<ThemeMode>(getStoredMode);
   const [systemDark, setSystemDark] = useState(getSystemPreference);
 
@@ -54,33 +63,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // Apply data-theme attribute
+  // Apply data-theme attribute for dark mode
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Apply salon-specific CSS variable overrides
+  // Apply default theme CSS variables once
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--color-primary', theme.primary);
-    root.style.setProperty('--color-primary-dark', theme.primaryDark);
-    root.style.setProperty('--color-primary-light', theme.primaryLight);
-    root.style.setProperty('--color-accent', theme.accent);
-    root.style.setProperty('--border-radius', theme.borderRadius);
-    root.style.setProperty('--font-family', theme.fontFamily);
-  }, [theme]);
-
-  const setTheme = useCallback((newTheme: SalonTheme) => setThemeState(newTheme), []);
-  const resetTheme = useCallback(() => {
-    setThemeState(defaultTheme);
-    // Clear inline overrides so CSS theme.css takes over
-    const root = document.documentElement;
-    root.style.removeProperty('--color-primary');
-    root.style.removeProperty('--color-primary-dark');
-    root.style.removeProperty('--color-primary-light');
-    root.style.removeProperty('--color-accent');
-    root.style.removeProperty('--border-radius');
-    root.style.removeProperty('--font-family');
+    root.style.setProperty('--color-primary', defaultTheme.primary);
+    root.style.setProperty('--color-primary-dark', defaultTheme.primaryDark);
+    root.style.setProperty('--color-primary-light', defaultTheme.primaryLight);
+    root.style.setProperty('--color-accent', defaultTheme.accent);
+    root.style.setProperty('--border-radius', defaultTheme.borderRadius);
+    root.style.setProperty('--font-family', defaultTheme.fontFamily);
   }, []);
 
   const setThemeMode = useCallback((mode: ThemeMode) => {
@@ -93,7 +89,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [isDark, setThemeMode]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resetTheme, isDark, themeMode, setThemeMode, toggleDark }}>
+    <ThemeContext.Provider value={{ isDark, themeMode, setThemeMode, toggleDark }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -104,5 +100,3 @@ export function useTheme() {
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
   return ctx;
 }
-
-export { defaultTheme };

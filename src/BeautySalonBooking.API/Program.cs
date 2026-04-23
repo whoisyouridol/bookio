@@ -1,29 +1,72 @@
 using BeautySalonBooking.API.Middleware;
+using BeautySalonBooking.API.Observability;
 using BeautySalonBooking.Application;
 using Microsoft.EntityFrameworkCore;
 using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Infrastructure;
 using BeautySalonBooking.Infrastructure.Entities;
+using BeautySalonBooking.Infrastructure.Observability;
 using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Infrastructure.Persistence.Seed;
 using BeautySalonBooking.Infrastructure.Services;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 104_857_600); // 100 MB
 
-// Serilog
+// Serilog — console + OTLP (→ Loki)
+var lokiEndpoint = builder.Configuration["Otel:LokiEndpoint"] ?? "http://loki:3100/otlp/v1/logs";
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .Enrich.With(new TraceIdEnricher())
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .WriteTo.OpenTelemetry(opts =>
+    {
+        opts.Endpoint = lokiEndpoint;
+        opts.Protocol = OtlpProtocol.HttpProtobuf;
+        opts.ResourceAttributes = new Dictionary<string, object>
+        {
+            ["service.name"] = Telemetry.ServiceName
+        };
+    })
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// OpenTelemetry — distributed tracing (→ Tempo)
+var tempoEndpoint = builder.Configuration["Otel:TempoEndpoint"] ?? "http://tempo:4317";
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                .AddService(Telemetry.ServiceName))
+            .AddSource(Telemetry.ServiceName)
+            .AddAspNetCoreInstrumentation(opts =>
+            {
+                opts.RecordException = true;
+                opts.Filter = ctx => !ctx.Request.Path.StartsWithSegments("/health")
+                                  && !ctx.Request.Path.StartsWithSegments("/hangfire");
+            })
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation(opts =>
+            {
+                opts.SetDbStatementForText = true;
+            })
+            .AddOtlpExporter(opts =>
+            {
+                opts.Endpoint = new Uri(tempoEndpoint);
+            });
+    });
 
 // Services
 builder.Services.AddControllers();
@@ -147,6 +190,11 @@ RecurringJob.AddOrUpdate<ReminderSchedulerJob>(
     "reminder-scanner",
     job => job.ScanAndScheduleMissingRemindersAsync(),
     "*/15 * * * *");
+
+RecurringJob.AddOrUpdate<BookingExpirationJob>(
+    "booking-expiration",
+    job => job.ProcessPendingBookingsAsync(),
+    "*/5 * * * *"); // Every 5 minutes
 
 app.UseHttpsRedirection();
 app.MapGet("/health", () => Results.Ok("healthy"));

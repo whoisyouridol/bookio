@@ -22,11 +22,8 @@ export const deleteSalon = (id: string) =>
 export const getSalonMasters = (salonId: string) =>
   apiClient.get<SalonMasterDto[]>(`/salons/${salonId}/masters`).then(r => r.data);
 
-export const linkMasterToSalon = (salonId: string, data: { masterId: string; workingHoursStart: string; workingHoursEnd: string; workingDays: string[] }) =>
+export const linkMasterToSalon = (salonId: string, data: { masterId: string }) =>
   apiClient.post<SalonMasterDto>(`/salons/${salonId}/masters`, data).then(r => r.data);
-
-export const updateSalonMaster = (salonId: string, masterId: string, data: { workingHoursStart: string; workingHoursEnd: string; workingDays: string[] }) =>
-  apiClient.put(`/salons/${salonId}/masters/${masterId}`, data).then(r => r.data);
 
 export const unlinkMasterFromSalon = (salonId: string, masterId: string) =>
   apiClient.delete(`/salons/${salonId}/masters/${masterId}`);

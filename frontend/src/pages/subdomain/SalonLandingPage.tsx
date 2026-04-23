@@ -26,10 +26,8 @@ export default function SalonLandingPage() {
       {/* Hero */}
       <div className="max-w-md mx-auto">
         <div className="relative h-56 mx-4 mt-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)]">
-          {salon.logoUrl ? (
-            <ImageWithFallback src={salon.logoUrl} alt={salon.name} className="w-full h-full object-cover" />
-          ) : salon.photos[0] ? (
-            <ImageWithFallback src={salon.photos[0]} alt={salon.name} className="w-full h-full object-cover" />
+          {salon.coverPicture ? (
+            <ImageWithFallback src={salon.coverPicture} alt={salon.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)]">
               <h1 className="text-3xl font-bold text-white">{salon.name}</h1>

@@ -1,6 +1,7 @@
 using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Entities;
 using BeautySalonBooking.Domain.Enums;
+using BeautySalonBooking.Infrastructure.Observability;
 using BeautySalonBooking.Infrastructure.Persistence;
 using BeautySalonBooking.Infrastructure.Resources;
 using Hangfire;
@@ -17,19 +18,22 @@ public class NotificationService : INotificationService
     private readonly IConfiguration _configuration;
     private readonly ILogger<NotificationService> _logger;
     private readonly EmailMessages _msg;
+    private readonly SmsMessages _sms;
 
     public NotificationService(
         AppDbContext db,
         IBackgroundJobClient jobClient,
         IConfiguration configuration,
         ILogger<NotificationService> logger,
-        EmailMessages msg)
+        EmailMessages msg,
+        SmsMessages sms)
     {
         _db = db;
         _jobClient = jobClient;
         _configuration = configuration;
         _logger = logger;
         _msg = msg;
+        _sms = sms;
     }
 
     // ── Booking notifications ────────────────────────────────────────────────
@@ -49,6 +53,10 @@ public class NotificationService : INotificationService
         await CreateAndEnqueueNotificationAsync(
             booking, NotificationType.BookingPendingApproval,
             booking.ClientEmail, subject, body);
+
+        // SMS to client
+        await CreateAndEnqueueSmsNotificationAsync(booking, NotificationType.BookingPendingApproval,
+            booking.ClientPhone, key, "toMaster");
     }
 
     public async Task SendBookingConfirmedAsync(Guid bookingId)
@@ -66,7 +74,11 @@ public class NotificationService : INotificationService
             booking, NotificationType.BookingConfirmation,
             booking.ClientEmail, subject, body);
 
-        // Schedule reminder notifications
+        // SMS to client
+        await CreateAndEnqueueSmsNotificationAsync(booking, NotificationType.BookingConfirmation,
+            booking.ClientPhone, key, "toClient");
+
+        // Schedule reminder notifications (SMS only)
         await ScheduleRemindersAsync(booking);
     }
 
@@ -85,7 +97,56 @@ public class NotificationService : INotificationService
             booking, NotificationType.BookingCancelled,
             booking.ClientEmail, subject, body);
 
+        // SMS to client
+        var smsRecipientType = cancelledBy == CancellationSide.Client ? "toMaster" : "toClient";
+        await CreateAndEnqueueSmsNotificationAsync(booking, NotificationType.BookingCancelled,
+            booking.ClientPhone, key, smsRecipientType);
+
         // Cancel pending notifications for this booking
+        await CancelPendingNotificationsAsync(bookingId);
+    }
+
+    public async Task SendBookingApprovalReminderAsync(Guid bookingId)
+    {
+        var booking = await LoadBookingAsync(bookingId);
+        if (booking is null) return;
+
+        var key = "bookingApprovalReminder";
+        var subject = _msg.Get(key, "subject");
+        var body = BuildBookingHtml(booking,
+            _msg.Get(key, "kaTitle"), _msg.Get(key, "enTitle"),
+            _msg.Get(key, "kaMessage"), _msg.Get(key, "enMessage"));
+
+        await CreateAndEnqueueNotificationAsync(
+            booking, NotificationType.BookingApprovalReminder,
+            booking.ClientEmail, subject, body);
+
+        // SMS to master
+        await CreateAndEnqueueSmsNotificationAsync(booking, NotificationType.BookingApprovalReminder,
+            booking.ClientPhone, key, "toMaster");
+    }
+
+    public async Task SendBookingExpiredAsync(Guid bookingId)
+    {
+        var booking = await LoadBookingAsync(bookingId);
+        if (booking is null) return;
+
+        var key = "bookingExpired";
+        var subject = _msg.Get(key, "subject").Replace("{salonName}", booking.Salon?.Name ?? "");
+        var body = BuildBookingHtml(booking,
+            _msg.Get(key, "kaTitle"), _msg.Get(key, "enTitle"),
+            _msg.Get(key, "kaMessage"), _msg.Get(key, "enMessage"));
+
+        // Email to client
+        await CreateAndEnqueueNotificationAsync(
+            booking, NotificationType.BookingExpired,
+            booking.ClientEmail, subject, body);
+
+        // SMS to client
+        await CreateAndEnqueueSmsNotificationAsync(booking, NotificationType.BookingExpired,
+            booking.ClientPhone, key, "toClient");
+
+        // Cancel any pending notifications for this booking
         await CancelPendingNotificationsAsync(bookingId);
     }
 
@@ -103,6 +164,10 @@ public class NotificationService : INotificationService
         await CreateAndEnqueueNotificationAsync(
             booking, NotificationType.BookingCompleted,
             booking.ClientEmail, subject, body);
+
+        // SMS to client
+        await CreateAndEnqueueSmsNotificationAsync(booking, NotificationType.BookingCompleted,
+            booking.ClientPhone, key, "toClient");
     }
 
     public async Task SendReminderOneDayBeforeAsync(Guid bookingId)
@@ -231,6 +296,9 @@ public class NotificationService : INotificationService
         Booking booking, NotificationType type, string? recipientEmail,
         string subject, string body)
     {
+        using var activity = Telemetry.Source.StartActivity("Notification.Enqueue");
+        activity?.SetTag("notification.type", type.ToString());
+        activity?.SetTag("notification.booking_id", booking.Id.ToString());
         if (string.IsNullOrEmpty(recipientEmail))
         {
             _logger.LogInformation("No email for booking {BookingId} — skipping {Type}", booking.Id, type);
@@ -279,7 +347,9 @@ public class NotificationService : INotificationService
 
     private async Task ScheduleRemindersAsync(Booking booking)
     {
-        if (string.IsNullOrEmpty(booking.ClientEmail)) return;
+        var hasPhone = !string.IsNullOrEmpty(booking.ClientPhone);
+        var hasEmail = !string.IsNullOrEmpty(booking.ClientEmail);
+        if (!hasPhone && !hasEmail) return;
 
         var tzOffsetHours = _configuration.GetValue<int>("Booking:TimezoneOffsetHours", 4);
         var tzOffset = TimeSpan.FromHours(tzOffsetHours);
@@ -287,47 +357,146 @@ public class NotificationService : INotificationService
         var appointmentLocalDt = booking.BookingDate.ToDateTime(booking.StartTime);
         var appointmentUtc = DateTime.SpecifyKind(appointmentLocalDt - tzOffset, DateTimeKind.Utc);
 
-        var serviceNames = booking.BookingServices
-            .Select(bs => bs.MasterService?.Service?.Name ?? "Service")
-            .ToList();
-        var services = string.Join(", ", serviceNames);
+        var placeholders = new Dictionary<string, string>
+        {
+            ["salonName"] = booking.Salon?.Name ?? "",
+            ["time"] = booking.StartTime.ToString("HH:mm"),
+            ["date"] = booking.BookingDate.ToString("dd.MM.yyyy")
+        };
 
         // 24-hour reminder
         var reminder24At = appointmentUtc.AddHours(-24);
         if (reminder24At > DateTime.UtcNow)
         {
-            var k24 = "reminder24h";
-            await ScheduleReminderNotificationAsync(booking, NotificationType.Reminder24h,
-                reminder24At, _msg.Get(k24, "subject"),
-                BuildBookingHtml(booking,
-                    _msg.Get(k24, "kaTitle"), _msg.Get(k24, "enTitle"),
-                    _msg.Get(k24, "kaMessage"), _msg.Get(k24, "enMessage")));
+            if (hasPhone)
+                await ScheduleSmsReminderAsync(booking, NotificationType.Reminder24h,
+                    reminder24At, "reminder24h", "toClient", placeholders);
+            if (hasEmail)
+                await ScheduleEmailReminderAsync(booking, NotificationType.Reminder24h, reminder24At, "reminder24h");
         }
 
         // 3-hour reminder
         var reminder3At = appointmentUtc.AddHours(-3);
         if (reminder3At > DateTime.UtcNow)
         {
-            var k3 = "reminder3h";
-            await ScheduleReminderNotificationAsync(booking, NotificationType.Reminder3h,
-                reminder3At, _msg.Get(k3, "subject"),
-                BuildBookingHtml(booking,
-                    _msg.Get(k3, "kaTitle"), _msg.Get(k3, "enTitle"),
-                    _msg.Get(k3, "kaMessage"), _msg.Get(k3, "enMessage")));
+            if (hasPhone)
+                await ScheduleSmsReminderAsync(booking, NotificationType.Reminder3h,
+                    reminder3At, "reminder3h", "toClient", placeholders);
+            if (hasEmail)
+                await ScheduleEmailReminderAsync(booking, NotificationType.Reminder3h, reminder3At, "reminder3h");
         }
     }
 
-    private async Task ScheduleReminderNotificationAsync(
-        Booking booking, NotificationType type,
-        DateTime scheduledUtc, string subject, string body)
+    private async Task CreateAndEnqueueSmsNotificationAsync(
+        Booking booking, NotificationType type, string? recipientPhone,
+        string smsMessageKey, string smsRecipientType)
     {
-        // Check for duplicate
+        if (string.IsNullOrEmpty(recipientPhone))
+        {
+            _logger.LogInformation("No phone for booking {BookingId} — skipping SMS {Type}", booking.Id, type);
+            return;
+        }
+
+        // Check for duplicate (same booking + type + SMS channel)
+        var exists = booking.Notifications.Any(n =>
+            n.Type == type
+            && n.Channel == NotificationChannel.Sms
+            && n.Status != NotificationStatus.Cancelled);
+
+        if (exists) return;
+
+        var placeholders = new Dictionary<string, string>
+        {
+            ["salonName"] = booking.Salon?.Name ?? "",
+            ["date"] = booking.BookingDate.ToString("dd.MM.yyyy"),
+            ["time"] = booking.StartTime.ToString("HH:mm"),
+            ["clientName"] = booking.ClientName ?? ""
+        };
+
+        var smsBody = _sms.Format(smsMessageKey, smsRecipientType, placeholders);
+
+        var notification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            BookingId = booking.Id,
+            Type = type,
+            Channel = NotificationChannel.Sms,
+            Status = NotificationStatus.Pending,
+            RecipientPhone = recipientPhone,
+            Body = smsBody,
+            ScheduledAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Notifications.Add(notification);
+        await _db.SaveChangesAsync();
+
+        var jobId = _jobClient.Enqueue<NotificationJobProcessor>(
+            p => p.ProcessNotificationAsync(notification.Id));
+
+        notification.HangfireJobId = jobId;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Enqueued SMS {Type} notification {NotificationId} for booking {BookingId}",
+            type, notification.Id, booking.Id);
+    }
+
+    private async Task ScheduleSmsReminderAsync(
+        Booking booking, NotificationType type, DateTime scheduledUtc,
+        string smsMessageKey, string smsRecipientType, Dictionary<string, string> placeholders)
+    {
+        // Check for duplicate (SMS channel)
+        var exists = booking.Notifications.Any(n =>
+            n.Type == type
+            && n.Channel == NotificationChannel.Sms
+            && n.Status != NotificationStatus.Cancelled);
+
+        if (exists) return;
+
+        var smsBody = _sms.Format(smsMessageKey, smsRecipientType, placeholders);
+
+        var notification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            BookingId = booking.Id,
+            Type = type,
+            Channel = NotificationChannel.Sms,
+            Status = NotificationStatus.Pending,
+            RecipientPhone = booking.ClientPhone,
+            Body = smsBody,
+            ScheduledAt = scheduledUtc,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Notifications.Add(notification);
+        await _db.SaveChangesAsync();
+
+        var delay = scheduledUtc - DateTime.UtcNow;
+        var jobId = _jobClient.Schedule<NotificationJobProcessor>(
+            p => p.ProcessNotificationAsync(notification.Id),
+            delay);
+
+        notification.HangfireJobId = jobId;
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Scheduled SMS {Type} reminder for booking {BookingId} at {ScheduledAt}",
+            type, booking.Id, scheduledUtc);
+    }
+
+    private async Task ScheduleEmailReminderAsync(
+        Booking booking, NotificationType type, DateTime scheduledUtc, string msgKey)
+    {
         var exists = booking.Notifications.Any(n =>
             n.Type == type
             && n.Channel == NotificationChannel.Email
             && n.Status != NotificationStatus.Cancelled);
 
         if (exists) return;
+
+        var subject = _msg.Get(msgKey, "subject");
+        var body = BuildBookingHtml(booking,
+            _msg.Get(msgKey, "kaTitle"), _msg.Get(msgKey, "enTitle"),
+            _msg.Get(msgKey, "kaMessage"), _msg.Get(msgKey, "enMessage"));
 
         var notification = new Notification
         {
@@ -354,7 +523,7 @@ public class NotificationService : INotificationService
         notification.HangfireJobId = jobId;
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Scheduled {Type} reminder for booking {BookingId} at {ScheduledAt}",
+        _logger.LogInformation("Scheduled email {Type} reminder for booking {BookingId} at {ScheduledAt}",
             type, booking.Id, scheduledUtc);
     }
 
