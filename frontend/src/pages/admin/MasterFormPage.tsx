@@ -75,6 +75,10 @@ export default function MasterFormPage() {
 
   useEffect(() => {
     if (existing) {
+      setEmail(existing.email ?? '');
+      setFirstName(existing.firstName ?? '');
+      setLastName(existing.lastName ?? '');
+      setPhone(existing.phone ?? '');
       setPhotoKeys(existing.photo ? [existing.photo] : []);
       setDescription(existing.description ?? '');
       setAutoApproveBookings(existing.autoApproveBookings);
@@ -100,7 +104,12 @@ export default function MasterFormPage() {
       if (isNew) {
         return createMaster({ email, firstName, lastName, phone, photo: photoKeys[0] || undefined, description: description || undefined, autoApproveBookings });
       }
-      return updateMaster(masterId!, { photo: photoKeys[0] || undefined, description: description || undefined, autoApproveBookings });
+      return updateMaster(masterId!, {
+        photo: photoKeys[0] || undefined,
+        description: description || undefined,
+        autoApproveBookings,
+        firstName, lastName, email, phone: phone || undefined,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['masters'] });
@@ -160,24 +169,12 @@ export default function MasterFormPage() {
       <h1 className="text-2xl font-bold text-[var(--color-text)]">{isNew ? t('admin.masterForm.newMaster') : t('admin.masterForm.editMaster')}</h1>
 
       <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
-        {isNew ? (
-          <>
-            <FormField label={t('admin.masterForm.email')} type="email" value={email} onChange={setEmail} required />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label={t('admin.masterForm.firstName')} value={firstName} onChange={setFirstName} required />
-              <FormField label={t('admin.masterForm.lastName')} value={lastName} onChange={setLastName} required />
-            </div>
-            <FormField label={t('admin.masterForm.phone')} value={phone} onChange={setPhone} required />
-          </>
-        ) : (
-          existing && (
-            <div className="bg-[var(--color-bg)] rounded-lg px-4 py-3 text-sm text-[var(--color-text-secondary)] space-y-0.5">
-              <p className="font-medium text-[var(--color-text)]">{existing.firstName} {existing.lastName}</p>
-              <p className="text-xs text-[var(--color-text-tertiary)]">{existing.email ?? existing.phone ?? '\u2014'}</p>
-              <p className="text-xs text-[var(--color-text-tertiary)] mt-1">{t('admin.masterForm.editNameNote' as any)}</p>
-            </div>
-          )
-        )}
+        <FormField label={t('admin.masterForm.email')} type="email" value={email} onChange={setEmail} required />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label={t('admin.masterForm.firstName')} value={firstName} onChange={setFirstName} required />
+          <FormField label={t('admin.masterForm.lastName')} value={lastName} onChange={setLastName} required />
+        </div>
+        <FormField label={t('admin.masterForm.phone')} value={phone} onChange={setPhone} required={isNew} />
         <div>
           <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('admin.masterForm.photo')}</label>
           <DragDropUpload folder="masters" accept="image" maxFiles={1} values={photoKeys} onChange={setPhotoKeys} />
@@ -315,11 +312,17 @@ export default function MasterFormPage() {
                           className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <input type="number" placeholder={t('admin.masterForm.price')} value={editPrice} onChange={e => setEditPrice(e.target.value)}
-                          className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
-                        <input type="number" placeholder={t('admin.masterForm.durationMin')} value={editDuration} onChange={e => setEditDuration(e.target.value)}
-                          className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+                      <div className="grid grid-cols-3 gap-3 items-end">
+                        <div>
+                          <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{t('admin.masterForm.price')}</label>
+                          <input type="number" placeholder="85" value={editPrice} onChange={e => setEditPrice(e.target.value)}
+                            className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{t('admin.masterForm.durationMin')}</label>
+                          <input type="number" placeholder="60" value={editDuration} onChange={e => setEditDuration(e.target.value)}
+                            className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+                        </div>
                         <Button size="sm" disabled={!editPrice || !editDuration} loading={updateServiceMutation.isPending}
                           onClick={() => updateServiceMutation.mutate(ms.serviceId)}>
                           <Check className="w-4 h-4" />
@@ -379,11 +382,17 @@ export default function MasterFormPage() {
                 className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)] resize-none"
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <input type="number" placeholder={t('admin.masterForm.price')} value={addPrice} onChange={e => setAddPrice(e.target.value)}
-                className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
-              <input type="number" placeholder={t('admin.masterForm.durationMin')} value={addDuration} onChange={e => setAddDuration(e.target.value)}
-                className="px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+            <div className="grid grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{t('admin.masterForm.price')}</label>
+                <input type="number" placeholder="85" value={addPrice} onChange={e => setAddPrice(e.target.value)}
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">{t('admin.masterForm.durationMin')}</label>
+                <input type="number" placeholder="60" value={addDuration} onChange={e => setAddDuration(e.target.value)}
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]" />
+              </div>
               <Button size="sm" disabled={!addServiceId || !addPrice || !addDuration} loading={addServiceMutation.isPending}
                 onClick={() => addServiceMutation.mutate()}>
                 <Plus className="w-4 h-4" />

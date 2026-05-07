@@ -61,12 +61,56 @@ public class MasterServiceTests
         var master = await TestData.CreateMasterAsync(db);
         var req = new UpdateMasterRequest("photo.jpg", "Updated description", false);
 
-        var result = await svc.UpdateAsync(master.Id, req);
+        var (result, error) = await svc.UpdateAsync(master.Id, req);
 
+        error.Should().BeNull();
         result.Should().NotBeNull();
         result!.Description.Should().Be("Updated description");
         result.AutoApproveBookings.Should().BeFalse();
         result.Photo.Should().Be("photo.jpg");
+    }
+
+    [Fact]
+    public async Task Update_UpdatesLinkedUserNameEmailPhone()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = CreateService(db);
+        var master = await TestData.CreateMasterAsync(db);
+        db.Set<AppUser>().Add(new AppUser
+        {
+            Id = Guid.NewGuid(), MasterId = master.Id,
+            UserName = "u", FirstName = "Old", LastName = "Name",
+            Email = "old@example.com", PhoneNumber = "+10000000000",
+        });
+        await db.SaveChangesAsync();
+
+        var (result, error) = await svc.UpdateAsync(master.Id, new UpdateMasterRequest(
+            null, null, true, FirstName: "New", LastName: "Person",
+            Email: "new@example.com", Phone: "+1 (415) 555-0100"));
+
+        error.Should().BeNull();
+        result.Should().NotBeNull();
+        result!.FirstName.Should().Be("New");
+        result.LastName.Should().Be("Person");
+        result.Email.Should().Be("new@example.com");
+    }
+
+    [Fact]
+    public async Task Update_ReturnsError_WhenEmailConflicts()
+    {
+        var db = InMemoryDbHelper.Create();
+        var svc = CreateService(db);
+        var master = await TestData.CreateMasterAsync(db);
+        db.Set<AppUser>().AddRange(
+            new AppUser { Id = Guid.NewGuid(), MasterId = master.Id, UserName = "a", Email = "a@x.com" },
+            new AppUser { Id = Guid.NewGuid(), UserName = "b", Email = "taken@x.com" });
+        await db.SaveChangesAsync();
+
+        var (result, error) = await svc.UpdateAsync(master.Id, new UpdateMasterRequest(
+            null, null, true, Email: "taken@x.com"));
+
+        result.Should().BeNull();
+        error.Should().Be("Email is already registered");
     }
 
     // ── Delete ──────────────────────────────────────────────────────────────

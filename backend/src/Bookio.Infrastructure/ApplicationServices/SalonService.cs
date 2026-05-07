@@ -51,7 +51,6 @@ public class SalonService
             Slug = slug,
             Address = req.Address,
             GoogleMapsUrl = req.GoogleMapsUrl,
-            YandexMapsUrl = req.YandexMapsUrl,
             WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart),
             WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd),
             WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList(),
@@ -77,7 +76,6 @@ public class SalonService
         salon.Name = req.Name;
         salon.Address = req.Address;
         salon.GoogleMapsUrl = req.GoogleMapsUrl;
-        salon.YandexMapsUrl = req.YandexMapsUrl;
         salon.WorkingHoursStart = TimeOnly.Parse(req.WorkingHoursStart);
         salon.WorkingHoursEnd = TimeOnly.Parse(req.WorkingHoursEnd);
         salon.WorkingDays = req.WorkingDays.Select(Enum.Parse<DayOfWeek>).ToList();
@@ -172,7 +170,7 @@ public class SalonService
     // ── Mapping ───────────────────────────────────────────────────────────────
 
     private static SalonDto MapToDto(Salon s) => new(
-        s.Id, s.Name, s.Slug, s.Address, s.GoogleMapsUrl, s.YandexMapsUrl,
+        s.Id, s.Name, s.Slug, s.Address, s.GoogleMapsUrl,
         s.WorkingHoursStart.ToString("HH:mm"),
         s.WorkingHoursEnd.ToString("HH:mm"),
         s.WorkingDays.Select(d => d.ToString()).ToList(),
@@ -193,7 +191,7 @@ public class SalonService
 
         return new SalonDetailDto(
             salon.Id, salon.Name, salon.Slug, salon.Address,
-            salon.GoogleMapsUrl, salon.YandexMapsUrl,
+            salon.GoogleMapsUrl,
             salon.WorkingHoursStart.ToString("HH:mm"),
             salon.WorkingHoursEnd.ToString("HH:mm"),
             salon.WorkingDays.Select(d => d.ToString()).ToList(),

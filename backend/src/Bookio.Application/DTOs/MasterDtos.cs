@@ -30,5 +30,9 @@ public record CreateMasterRequest(
 public record UpdateMasterRequest(
     string? Photo,
     string? Description,
-    bool AutoApproveBookings = true
+    bool AutoApproveBookings = true,
+    string? FirstName = null,
+    string? LastName = null,
+    string? Email = null,
+    string? Phone = null
 );

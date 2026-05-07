@@ -57,20 +57,12 @@ export default function SalonLandingPage() {
               label={t('salon.workingDays')}
               value={salon.workingDays.join(', ')}
             />
-            {(salon.googleMapsUrl || salon.yandexMapsUrl) && (
+            {salon.googleMapsUrl && (
               <div className="flex gap-3 pt-1">
-                {salon.googleMapsUrl && (
-                  <a href={salon.googleMapsUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-[var(--color-primary)] font-medium">
-                    <ExternalLink className="w-3.5 h-3.5" /> {t('salon.googleMaps')}
-                  </a>
-                )}
-                {salon.yandexMapsUrl && (
-                  <a href={salon.yandexMapsUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-[var(--color-primary)] font-medium">
-                    <ExternalLink className="w-3.5 h-3.5" /> {t('salon.yandexMaps')}
-                  </a>
-                )}
+                <a href={salon.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-[var(--color-primary)] font-medium">
+                  <ExternalLink className="w-3.5 h-3.5" /> {t('salon.googleMaps')}
+                </a>
               </div>
             )}
           </div>

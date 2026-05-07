@@ -18,7 +18,6 @@ public class SalonConfiguration : IEntityTypeConfiguration<Salon>
         builder.HasIndex(s => s.Slug).IsUnique().HasFilter("\"Slug\" IS NOT NULL");
         builder.Property(s => s.Address).IsRequired().HasMaxLength(500);
         builder.Property(s => s.GoogleMapsUrl).HasMaxLength(1000);
-        builder.Property(s => s.YandexMapsUrl).HasMaxLength(1000);
         builder.Property(s => s.CoverPicture).HasMaxLength(1000);
 
         var listDowComparer = new ValueComparer<List<DayOfWeek>>(

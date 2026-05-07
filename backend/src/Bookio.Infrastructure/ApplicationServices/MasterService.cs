@@ -127,23 +127,46 @@ public class MasterService
         return (MapToDto(master, user.Email ?? string.Empty, user.FirstName, user.LastName, user.PhoneNumber, user.IsActive), null);
     }
 
-    public async Task<MasterDto?> UpdateAsync(Guid id, UpdateMasterRequest req)
+    public async Task<(MasterDto? result, string? error)> UpdateAsync(Guid id, UpdateMasterRequest req)
     {
         var master = await _db.Masters.Include(m => m.Ratings).FirstOrDefaultAsync(m => m.Id == id);
-        if (master == null) return null;
+        if (master == null) return (null, null);
 
         master.Photo = req.Photo;
         master.Description = req.Description;
         master.AutoApproveBookings = req.AutoApproveBookings;
         master.UpdatedAt = DateTime.UtcNow;
+
+        var users = _db.Set<AppUser>();
+        var user = await users.FirstOrDefaultAsync(u => u.MasterId == id);
+        if (user != null)
+        {
+            if (req.FirstName != null) user.FirstName = req.FirstName;
+            if (req.LastName != null) user.LastName = req.LastName;
+
+            if (req.Email != null && !string.Equals(req.Email, user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                if (await users.AnyAsync(u => u.Id != user.Id && u.Email == req.Email))
+                    return (null, "Email is already registered");
+                user.Email = req.Email;
+                user.NormalizedEmail = req.Email.ToUpperInvariant();
+            }
+
+            if (req.Phone != null)
+            {
+                var normalizedPhone = PhoneNormalizer.Normalize(req.Phone);
+                if (normalizedPhone != user.PhoneNumber)
+                {
+                    if (normalizedPhone != null && await users.AnyAsync(u => u.Id != user.Id && u.PhoneNumber == normalizedPhone))
+                        return (null, "Phone number is already registered");
+                    user.PhoneNumber = normalizedPhone;
+                }
+            }
+        }
+
         await _db.SaveChangesAsync();
 
-        var user = await _db.Set<AppUser>()
-            .Where(u => u.MasterId == id)
-            .Select(u => new { u.Email, u.FirstName, u.LastName, u.PhoneNumber, u.IsActive })
-            .FirstOrDefaultAsync();
-
-        return MapToDto(master, user?.Email ?? string.Empty, user?.FirstName, user?.LastName, user?.PhoneNumber, user?.IsActive ?? true);
+        return (MapToDto(master, user?.Email ?? string.Empty, user?.FirstName, user?.LastName, user?.PhoneNumber, user?.IsActive ?? true), null);
     }
 
     public async Task<bool> DeleteAsync(Guid id)

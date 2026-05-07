@@ -80,7 +80,7 @@ public class SalonServiceTests
     {
         var db = InMemoryDbHelper.Create();
         var svc = new SalonService(db);
-        var req = new CreateSalonRequest("My Salon", null, "123 Main St", null, null,
+        var req = new CreateSalonRequest("My Salon", null, "123 Main St", null,
             "09:00", "21:00", ["Monday", "Tuesday"], null);
 
         var result = await svc.CreateAsync(req);
@@ -101,7 +101,7 @@ public class SalonServiceTests
         var svc = new SalonService(db);
         var salon = await TestData.CreateSalonAsync(db);
 
-        var req = new UpdateSalonRequest("Renamed", null, "New Address", null, null,
+        var req = new UpdateSalonRequest("Renamed", null, "New Address", null,
             "10:00", "20:00", ["Friday"], null);
 
         var result = await svc.UpdateAsync(salon.Id, req);
@@ -117,7 +117,7 @@ public class SalonServiceTests
     {
         var db = InMemoryDbHelper.Create();
         var svc = new SalonService(db);
-        var req = new UpdateSalonRequest("X", null, "X", null, null, "09:00", "21:00", ["Monday"], null);
+        var req = new UpdateSalonRequest("X", null, "X", null, "09:00", "21:00", ["Monday"], null);
 
         var result = await svc.UpdateAsync(Guid.NewGuid(), req);
 

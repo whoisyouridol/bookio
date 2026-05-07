@@ -59,7 +59,8 @@ public class MastersController : ControllerBase
     {
         var validation = await _updateValidator.ValidateAsync(req);
         if (!validation.IsValid) return BadRequest(validation.Errors.Select(e => e.ErrorMessage));
-        var result = await _masterService.UpdateAsync(id, req);
+        var (result, error) = await _masterService.UpdateAsync(id, req);
+        if (error != null) return BadRequest(new { error });
         return result == null ? NotFound() : Ok(result);
     }
 

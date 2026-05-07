@@ -6,7 +6,6 @@ export interface SalonDto {
   slug?: string;
   address: string;
   googleMapsUrl?: string;
-  yandexMapsUrl?: string;
   workingHoursStart: string;
   workingHoursEnd: string;
   workingDays: string[];
@@ -24,7 +23,6 @@ export interface CreateSalonRequest {
   slug?: string;
   address: string;
   googleMapsUrl?: string;
-  yandexMapsUrl?: string;
   workingHoursStart: string;
   workingHoursEnd: string;
   workingDays: string[];
@@ -65,6 +63,10 @@ export interface UpdateMasterRequest {
   photo?: string;
   description?: string;
   autoApproveBookings: boolean;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface CreateClientAccountRequest {

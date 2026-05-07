@@ -44,7 +44,6 @@ export default function SalonFormPage() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [googleMapsUrl, setGoogleMapsUrl] = useState('');
-  const [yandexMapsUrl, setYandexMapsUrl] = useState('');
   const [hoursStart, setHoursStart] = useState('09:00');
   const [hoursEnd, setHoursEnd] = useState('21:00');
   const [workingDays, setWorkingDays] = useState<string[]>(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
@@ -66,7 +65,6 @@ export default function SalonFormPage() {
       setName(existing.name);
       setAddress(existing.address);
       setGoogleMapsUrl(existing.googleMapsUrl ?? '');
-      setYandexMapsUrl(existing.yandexMapsUrl ?? '');
       setHoursStart(existing.workingHoursStart.slice(0, 5));
       setHoursEnd(existing.workingHoursEnd.slice(0, 5));
       setWorkingDays(existing.workingDays);
@@ -81,7 +79,6 @@ export default function SalonFormPage() {
         name, address,
         slug: slug || undefined,
         googleMapsUrl: googleMapsUrl || undefined,
-        yandexMapsUrl: yandexMapsUrl || undefined,
         workingHoursStart: hoursStart,
         workingHoursEnd: hoursEnd,
         workingDays,
@@ -168,7 +165,6 @@ export default function SalonFormPage() {
         <FormField label={t('admin.salonForm.slug')} value={slug} onChange={setSlug} placeholder={t('admin.salonForm.slugPlaceholder')} />
         <FormField label={t('admin.salonForm.address')} value={address} onChange={setAddress} required />
         <FormField label={t('admin.salonForm.googleMapsUrl')} value={googleMapsUrl} onChange={setGoogleMapsUrl} />
-        <FormField label={t('admin.salonForm.yandexMapsUrl')} value={yandexMapsUrl} onChange={setYandexMapsUrl} />
 
         <div className="grid grid-cols-2 gap-4">
           <FormField label={t('admin.salonForm.opensAt')} value={hoursStart} onChange={setHoursStart} type="time" />

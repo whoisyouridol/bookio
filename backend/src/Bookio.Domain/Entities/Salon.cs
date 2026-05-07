@@ -7,7 +7,6 @@ public class Salon
     public string? Slug { get; set; }
     public string Address { get; set; } = string.Empty;
     public string? GoogleMapsUrl { get; set; }
-    public string? YandexMapsUrl { get; set; }
     public TimeOnly WorkingHoursStart { get; set; }
     public TimeOnly WorkingHoursEnd { get; set; }
     public List<DayOfWeek> WorkingDays { get; set; } = new();

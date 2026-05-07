@@ -18,6 +18,13 @@ public class UpdateMasterValidator : AbstractValidator<UpdateMasterRequest>
 {
     public UpdateMasterValidator()
     {
-        // Photo and Description are optional; nothing required
+        When(x => x.FirstName != null, () =>
+            RuleFor(x => x.FirstName!).NotEmpty().MaximumLength(100));
+        When(x => x.LastName != null, () =>
+            RuleFor(x => x.LastName!).NotEmpty().MaximumLength(100));
+        When(x => x.Email != null, () =>
+            RuleFor(x => x.Email!).NotEmpty().EmailAddress().MaximumLength(256));
+        When(x => x.Phone != null, () =>
+            RuleFor(x => x.Phone!).NotEmpty().MaximumLength(20));
     }
 }

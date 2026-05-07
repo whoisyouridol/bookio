@@ -11,7 +11,7 @@ public class BookingsControllerTests : IntegrationTestBase
 
     // Full setup: salon → master → link → service → master-service → slots
     private async Task<(string salonId, string masterId, string serviceId)> FullSetupAsync(
-        string date = "2026-05-04", bool autoApproveBookings = true) // Monday
+        string date = "2026-05-11", bool autoApproveBookings = true) // Monday
     {
         var (salon, _) = await PostAsync<JsonElement>("/api/salons", new
         {
@@ -42,7 +42,7 @@ public class BookingsControllerTests : IntegrationTestBase
     }
 
     private object BookingBody(string salonId, string masterId, string serviceId,
-        string date = "2026-05-04", string time = "10:00") => new
+        string date = "2026-05-11", string time = "10:00") => new
     {
         salonId, masterId, serviceIds = new[] { serviceId },
         clientName = "Test Client", clientPhone = "+79990001122",
@@ -54,10 +54,10 @@ public class BookingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task Create_Returns201_WithPriceAndStatus()
     {
-        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-04");
+        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-11");
 
         var (result, status) = await PostAsync<JsonElement>("/api/bookings",
-            BookingBody(salonId, masterId, serviceId, "2026-05-04"));
+            BookingBody(salonId, masterId, serviceId, "2026-05-11"));
 
         status.Should().Be(HttpStatusCode.Created);
         result.GetProperty("totalPrice").GetDecimal().Should().Be(2000);
@@ -68,15 +68,15 @@ public class BookingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task Create_Returns400_WhenNoSlotAvailable()
     {
-        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-05");
+        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-12");
 
         // First booking takes 10:00 slot
         await PostAsync<JsonElement>("/api/bookings",
-            BookingBody(salonId, masterId, serviceId, "2026-05-05"));
+            BookingBody(salonId, masterId, serviceId, "2026-05-12"));
 
         // Second booking tries same slot
         var response = await Client.PostAsJsonAsync("/api/bookings",
-            BookingBody(salonId, masterId, serviceId, "2026-05-05"));
+            BookingBody(salonId, masterId, serviceId, "2026-05-12"));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -131,9 +131,9 @@ public class BookingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task GetAll_FiltersBySalon()
     {
-        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-06");
+        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-13");
         await PostAsync<JsonElement>("/api/bookings",
-            BookingBody(salonId, masterId, serviceId, "2026-05-06"));
+            BookingBody(salonId, masterId, serviceId, "2026-05-13"));
 
         var list = await GetAsync<List<JsonElement>>($"/api/bookings?salonId={salonId}");
 
@@ -146,9 +146,9 @@ public class BookingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task GetById_Returns200_WithServices()
     {
-        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-07");
+        var (salonId, masterId, serviceId) = await FullSetupAsync("2026-05-14");
         var (created, _) = await PostAsync<JsonElement>("/api/bookings",
-            BookingBody(salonId, masterId, serviceId, "2026-05-07"));
+            BookingBody(salonId, masterId, serviceId, "2026-05-14"));
         var id = created.GetProperty("id").GetString();
 
         var result = await GetAsync<JsonElement>($"/api/bookings/{id}");

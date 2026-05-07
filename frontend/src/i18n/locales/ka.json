@@ -11,7 +11,6 @@
       "date": "თარიღი",
       "dateOverrideSaved": "დღის გამონაკლისი შენახულია",
       "dateOverrides": "დღეების გამონაკლისები",
-      "dayOff": "დასვენების დღე",
       "editSchedule": "განრიგის რედაქტირება",
       "endDate": "დასრულების თარიღი",
       "failedToAddTimeOff": "დასვენების დამატება ვერ მოხერხდა",
@@ -121,7 +120,7 @@
       "cancel": "გაუქმება",
       "create": "შექმნა",
       "customPhoto": "ფოტო",
-      "customPhotoForMaster": "ამ მასტერის ფოტო (არასავალდებულო)",
+      "customPhotoForMaster": "თქვენი ფოტო ამ სერვისისთვის (არასავალდებულო)",
       "defaultPhotoLabel": "ნაგულისხმევი სერვისის ფოტო:",
       "defaultPhotoNote": "თუ ფოტო არ აიტვირთება, გამოყენებული იქნება ნაგულისხმევი სერვისის ფოტო:",
       "description": "აღწერა",
@@ -129,7 +128,6 @@
       "descriptionPlaceholder": "მაგ. მოიცავს დაბანას, შეჭრას და გაშრობას…",
       "durationMin": "ხანგრძლივობა წთ",
       "editMaster": "მასტერის რედაქტირება",
-      "editNameNote": "სახელის, ელ. ფოსტის ან ტელეფონის შესაცვლელად — გამოიყენეთ ანგარიშის ჩანართი.",
       "email": "ელ. ფოსტა *",
       "failedToAddMaster": "მასტერის დამატება ვერ მოხერხდა.",
       "failedToAddService": "სერვისის დამატება ვერ მოხერხდა.",
@@ -246,8 +244,7 @@
       "searchByName": "ძიება სახელით…",
       "slug": "სლაგი",
       "slugPlaceholder": "my-salon (ავტომატურად გენერირდება თუ ცარიელია)",
-      "workingDays": "სამუშაო დღეები",
-      "yandexMapsUrl": "Yandex Maps ბმული"
+      "workingDays": "სამუშაო დღეები"
     },
     "salonMasters": {
       "add": "დამატება",
@@ -658,8 +655,7 @@
     "noMastersAvailable": "ხელმისაწვდომი მასტერები არ არის.",
     "ourMasters": "ჩვენი მასტერები",
     "workingDays": "სამუშაო დღეები",
-    "workingHours": "სამუშაო საათები",
-    "yandexMaps": "Yandex Maps"
+    "workingHours": "სამუშაო საათები"
   },
   "bookingDetails": {
     "services": "სერვისები",

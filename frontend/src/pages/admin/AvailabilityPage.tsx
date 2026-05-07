@@ -209,7 +209,6 @@ function DateOverridesSection({ salonId, masterId }: { salonId: string; masterId
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [formDate, setFormDate] = useState('');
-  const [isDayOff, setIsDayOff] = useState(false);
   const [formSlots, setFormSlots] = useState<DateOverrideSlotItemRequest[]>([{ startTime: '09:00', endTime: '18:00' }]);
 
   const { data: overrides = [], isLoading } = useQuery({
@@ -220,8 +219,8 @@ function DateOverridesSection({ salonId, masterId }: { salonId: string; masterId
   const upsertMutation = useMutation({
     mutationFn: () => upsertDateOverride(salonId, masterId, {
       date: formDate,
-      isDayOff,
-      slots: isDayOff ? undefined : formSlots,
+      isDayOff: false,
+      slots: formSlots,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['date-overrides', salonId, masterId] });
@@ -243,7 +242,6 @@ function DateOverridesSection({ salonId, masterId }: { salonId: string; masterId
   const resetForm = () => {
     setShowForm(false);
     setFormDate('');
-    setIsDayOff(false);
     setFormSlots([{ startTime: '09:00', endTime: '18:00' }]);
   };
 
@@ -257,17 +255,13 @@ function DateOverridesSection({ salonId, masterId }: { salonId: string; masterId
                 <div key={ov.id} className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-2.5">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-[var(--color-text)]">{ov.date}</span>
-                    {ov.isDayOff ? (
-                      <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded text-xs font-medium">{t('admin.availability.dayOff')}</span>
-                    ) : (
-                      <div className="flex gap-1.5">
-                        {ov.slots.map((s, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-blue-50 text-[var(--color-info-text)] rounded text-xs font-medium">
-                            {s.startTime} — {s.endTime}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex gap-1.5">
+                      {ov.slots.map((s, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-blue-50 text-[var(--color-info-text)] rounded text-xs font-medium">
+                          {s.startTime} — {s.endTime}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                   <button
                     onClick={() => deleteMutation.mutate(ov.id)}
@@ -287,57 +281,46 @@ function DateOverridesSection({ salonId, masterId }: { salonId: string; masterId
                 <div>
                   <DatePicker label={t('admin.availability.date')} value={formDate} onChange={setFormDate} placeholder={t('components.datePicker.selectDate')} />
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer pb-2">
-                  <input
-                    type="checkbox"
-                    checked={isDayOff}
-                    onChange={e => setIsDayOff(e.target.checked)}
-                    className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-primary)]"
-                  />
-                  <span className="text-sm text-[var(--color-text)]">{t('admin.availability.dayOff')}</span>
-                </label>
               </div>
 
-              {!isDayOff && (
-                <div className="space-y-2">
-                  {formSlots.map((slot, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <input
-                        type="time"
-                        value={slot.startTime}
-                        onChange={e => {
-                          const next = [...formSlots];
-                          next[idx] = { ...next[idx], startTime: e.target.value };
-                          setFormSlots(next);
-                        }}
-                        className="px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-                      />
-                      <span className="text-[var(--color-text-tertiary)]">—</span>
-                      <input
-                        type="time"
-                        value={slot.endTime}
-                        onChange={e => {
-                          const next = [...formSlots];
-                          next[idx] = { ...next[idx], endTime: e.target.value };
-                          setFormSlots(next);
-                        }}
-                        className="px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-                      />
-                      {formSlots.length > 1 && (
-                        <button onClick={() => setFormSlots(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-[var(--color-error)]">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => setFormSlots(prev => [...prev, { startTime: '09:00', endTime: '18:00' }])}
-                    className="text-sm text-[var(--color-primary)] hover:text-[var(--color-primary)] font-medium flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> {t('admin.availability.addWindow')}
-                  </button>
-                </div>
-              )}
+              <div className="space-y-2">
+                {formSlots.map((slot, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <input
+                      type="time"
+                      value={slot.startTime}
+                      onChange={e => {
+                        const next = [...formSlots];
+                        next[idx] = { ...next[idx], startTime: e.target.value };
+                        setFormSlots(next);
+                      }}
+                      className="px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+                    />
+                    <span className="text-[var(--color-text-tertiary)]">—</span>
+                    <input
+                      type="time"
+                      value={slot.endTime}
+                      onChange={e => {
+                        const next = [...formSlots];
+                        next[idx] = { ...next[idx], endTime: e.target.value };
+                        setFormSlots(next);
+                      }}
+                      className="px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+                    />
+                    {formSlots.length > 1 && (
+                      <button onClick={() => setFormSlots(prev => prev.filter((_, i) => i !== idx))} className="p-1 text-[var(--color-error)]">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setFormSlots(prev => [...prev, { startTime: '09:00', endTime: '18:00' }])}
+                  className="text-sm text-[var(--color-primary)] hover:text-[var(--color-primary)] font-medium flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> {t('admin.availability.addWindow')}
+                </button>
+              </div>
 
               <div className="flex gap-2 pt-1">
                 <Button size="sm" onClick={() => upsertMutation.mutate()} loading={upsertMutation.isPending} disabled={!formDate}>

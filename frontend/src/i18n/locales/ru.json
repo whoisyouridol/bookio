@@ -11,7 +11,6 @@
       "date": "Дата",
       "dateOverrideSaved": "Исключение сохранено",
       "dateOverrides": "Исключения по датам",
-      "dayOff": "Выходной",
       "editSchedule": "Редактировать график",
       "endDate": "Дата окончания",
       "failedToAddTimeOff": "Не удалось добавить выходной",
@@ -121,7 +120,7 @@
       "cancel": "Отмена",
       "create": "Создать",
       "customPhoto": "Своё фото",
-      "customPhotoForMaster": "Фото мастера (необязательно)",
+      "customPhotoForMaster": "Ваше фото для этой услуги (необязательно)",
       "defaultPhotoLabel": "Фото по умолчанию:",
       "defaultPhotoNote": "Если фото не загружено, будет использоваться фото услуги по умолчанию:",
       "description": "Описание",
@@ -129,7 +128,6 @@
       "descriptionPlaceholder": "напр. Включает мытьё, стрижку и укладку…",
       "durationMin": "Длительность мин",
       "editMaster": "Редактировать мастера",
-      "editNameNote": "Для изменения имени, email или телефона — используйте вкладку «Аккаунт» в разделе «Аккаунты».",
       "email": "Email *",
       "failedToAddMaster": "Не удалось добавить мастера.",
       "failedToAddService": "Не удалось добавить услугу.",
@@ -246,8 +244,7 @@
       "searchByName": "Поиск по имени…",
       "slug": "Slug",
       "slugPlaceholder": "my-salon (генерируется автоматически)",
-      "workingDays": "Рабочие дни",
-      "yandexMapsUrl": "Ссылка Яндекс Карты"
+      "workingDays": "Рабочие дни"
     },
     "salonMasters": {
       "add": "Добавить",
@@ -658,8 +655,7 @@
     "noMastersAvailable": "Нет доступных мастеров.",
     "ourMasters": "Наши мастера",
     "workingDays": "Рабочие дни",
-    "workingHours": "Часы работы",
-    "yandexMaps": "Яндекс Карты"
+    "workingHours": "Часы работы"
   },
   "bookingDetails": {
     "services": "Услуги",

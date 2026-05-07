@@ -45,7 +45,6 @@ erDiagram
         string Name
         string Address
         string GoogleMapsUrl
-        string YandexMapsUrl
         time WorkingHoursStart
         time WorkingHoursEnd
         jsonb WorkingDays
@@ -258,7 +257,6 @@ erDiagram
 | Name | string | Required |
 | Address | string | Required |
 | GoogleMapsUrl | string? | Optional |
-| YandexMapsUrl | string? | Optional |
 | WorkingHoursStart | TimeOnly | e.g. 09:00 |
 | WorkingHoursEnd | TimeOnly | e.g. 21:00 |
 | WorkingDays | List\<DayOfWeek\> | Stored as JSON array |
