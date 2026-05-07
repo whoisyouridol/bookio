@@ -1,4 +1,4 @@
-# BookVisit — Beauty Salon Booking System
+# Bookio — Beauty Salon Booking Platform
 
 A full-stack appointment booking platform for beauty salons. Clients browse salons, pick a master and services, choose a time slot, and confirm a booking. Admins manage salons, masters, services, and bookings through a built-in panel.
 
@@ -21,48 +21,70 @@ A full-stack appointment booking platform for beauty salons. Clients browse salo
 | Toasts | Sonner |
 | Container | Docker, Docker Compose |
 
-## Project Structure
+## Repository Layout
 
 ```
-BookVisit/
-├── src/
-│   ├── BeautySalonBooking.Domain/          # Entities, Enums
-│   ├── BeautySalonBooking.Application/     # DTOs, Validators, Interfaces
-│   ├── BeautySalonBooking.Infrastructure/  # EF Core, Services, Email, Hangfire
-│   └── BeautySalonBooking.API/             # Controllers, Middleware, Program.cs
-├── tests/
-│   └── BeautySalonBooking.Tests/           # Integration tests (220 tests)
-├── frontend/                               # React + Vite SPA
+.
+├── backend/                            # .NET 8 solution
 │   ├── src/
-│   │   ├── api/                            # Axios API clients
-│   │   ├── components/                     # Shared UI components
-│   │   ├── contexts/                       # Auth, Theme, SalonSubdomain contexts
-│   │   ├── pages/
-│   │   │   ├── auth/                       # Login, Register, Password reset
-│   │   │   ├── client/                     # Booking flow (Home → Salon → Master → Book)
-│   │   │   └── admin/                      # Admin CRUD panel
-│   │   └── types/                          # TypeScript interfaces
-│   └── tests/e2e/                          # Playwright E2E tests
+│   │   ├── Bookio.Domain/              # Entities, enums (no dependencies)
+│   │   ├── Bookio.Application/         # DTOs, interfaces, validators
+│   │   ├── Bookio.Infrastructure/      # EF Core, services, MinIO, Identity, email
+│   │   └── Bookio.API/                 # Controllers, middleware, Program.cs (Dockerfile here)
+│   ├── tests/
+│   │   └── Bookio.Tests/               # Unit + Integration test folders
+│   ├── Bookio.sln
+│   └── CLAUDE.md                       # backend conventions
+├── frontend/                           # React + Vite SPA
+│   ├── src/
+│   │   ├── api/                        # Axios API clients
+│   │   ├── components/                 # Shared UI components
+│   │   ├── contexts/                   # Auth, Booking, Language, SalonSubdomain, Theme
+│   │   ├── hooks/                      # Reusable React hooks
+│   │   ├── i18n/                       # Georgian + English translations
+│   │   ├── lib/                        # Utilities, helpers
+│   │   ├── pages/{auth,client,admin,subdomain}/
+│   │   ├── router/                     # Route definitions
+│   │   ├── styles/                     # Tailwind layers, design tokens
+│   │   ├── types/                      # TypeScript interfaces
+│   │   ├── App.tsx                     # Main app shell
+│   │   └── SubdomainApp.tsx            # Per-salon subdomain shell
+│   ├── tests/e2e/                      # Playwright E2E tests
+│   ├── Dockerfile                      # Production frontend image (nginx)
+│   ├── nginx.conf
+│   └── CLAUDE.md                       # frontend conventions
+├── infra/                              # Observability config
+│   ├── grafana/                        # Provisioning (datasources, dashboards)
+│   ├── loki-config.yaml
+│   └── tempo-config.yaml
+├── docs/                               # Cross-cutting docs
+│   ├── ARCHITECTURE.md                 # ER diagram, endpoints, DTOs, processes
+│   ├── ARCHITECTURE-UI.md              # Frontend architecture
+│   ├── DESIGN-SYSTEM.md                # Tokens, components, patterns
+│   ├── AUDIT_ISSUES.md / AUDIT_TODO.md
+│   └── RULES.md
 ├── docker-compose.yml
-└── BeautySalonBooking.sln
+├── .env / .env.example
+└── CLAUDE.md                           # repo-wide conventions
 ```
 
 ## Quick Start (Docker)
 
 ```bash
-cp .env.example .env                   # fill in real values
-cp src/BeautySalonBooking.API/appsettings.example.json \
-   src/BeautySalonBooking.API/appsettings.json   # fill in secrets
+cp .env.example .env                    # fill in real values
+cp backend/src/Bookio.API/appsettings.example.json \
+   backend/src/Bookio.API/appsettings.json    # fill in secrets
 docker compose up -d --build
 ```
 
 | Service | URL |
 |---|---|
-| App (nginx) | http://localhost |
-| Swagger | http://localhost/swagger |
-| Hangfire dashboard | http://localhost/hangfire |
-| MinIO console | http://localhost:9001 |
+| App (nginx) | https://localhost |
+| Swagger | https://localhost/swagger |
+| Hangfire dashboard | https://localhost/hangfire |
+| MinIO console | http://localhost:9002 |
 | pgAdmin | http://localhost:5050 |
+| Grafana | https://localhost/grafana |
 
 The schema is created and seed data applied automatically on first run.
 
@@ -70,7 +92,7 @@ The schema is created and seed data applied automatically on first run.
 
 **Backend:**
 ```bash
-cd src/BeautySalonBooking.API
+cd backend/src/Bookio.API
 dotnet run
 # API at http://localhost:5032, Swagger at http://localhost:5032/swagger
 ```
@@ -83,7 +105,10 @@ npm run dev
 # App at http://localhost:5175
 ```
 
-Copy `frontend/.env.example` → `frontend/.env` and set `VITE_GOOGLE_CLIENT_ID`.
+Copy `frontend/.env.example` → `frontend/.env` and set:
+- `VITE_API_URL` — leave empty in dev (Vite proxy handles `/api`); set to backend URL in prod
+- `VITE_GOOGLE_CLIENT_ID` — Google OAuth client ID
+- `VITE_MAIN_DOMAINS` — comma-separated main domains; subdomains of these resolve to salon sites
 
 ## Configuration
 
@@ -91,9 +116,9 @@ All secrets live in gitignored files. Copy the examples and fill in real values:
 
 | File | Purpose |
 |---|---|
-| `src/BeautySalonBooking.API/appsettings.json` | DB, JWT, MinIO, SMTP, OAuth |
-| `.env` | Docker Compose variables (mirrors appsettings + MinIO + pgAdmin) |
-| `frontend/.env` | `VITE_GOOGLE_CLIENT_ID` |
+| `backend/src/Bookio.API/appsettings.json` | DB, JWT, MinIO, SMTP, OAuth, Booking timezone |
+| `.env` | Docker Compose variables (DB / MinIO / pgAdmin creds) |
+| `frontend/.env` | `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_MAIN_DOMAINS` |
 
 ### SMTP (email notifications)
 
@@ -107,7 +132,7 @@ The app sends transactional emails for booking events, reminders, and account cr
   "Username": "your-email@gmail.com",
   "Password": "YOUR_GOOGLE_APP_PASSWORD",
   "FromAddress": "noreply@yourdomain.com",
-  "FromName": "BookVisit"
+  "FromName": "Bookio"
 }
 ```
 
@@ -130,7 +155,7 @@ Bilingual (Georgian + English) branded HTML emails are sent via Hangfire backgro
 - Password reset / password changed
 - New master account credentials
 
-All message strings are centralized in `src/BeautySalonBooking.Infrastructure/Resources/email-messages.json`.
+All message strings are centralized in `backend/src/Bookio.Infrastructure/Resources/email-messages.json`.
 
 ## Seed Data
 
@@ -152,18 +177,21 @@ On first run the following test data is inserted:
 - Slots are generated on demand; booking duration = sum of selected service durations
 - Cancellation releases locked slots back to Available
 - Booking completion requires the appointment end time to have passed
-- Prices displayed in Georgian Lari (₾)
+- Prices displayed in Georgian Lari (₾); deployment region: Asia/Tbilisi (UTC+4)
 
 ## Running Tests
 
+**Backend (xUnit):**
 ```bash
-dotnet test tests/BeautySalonBooking.Tests
+dotnet test backend/tests/Bookio.Tests
 ```
 
-220 integration tests covering all controllers and the auth flow.
+200+ unit and integration tests in `tests/Bookio.Tests/{Unit,Integration}` covering services, controllers, and the auth flow.
 
-**E2E (Playwright):**
+**Frontend E2E (Playwright):**
 ```bash
 cd frontend
 npx playwright test
 ```
+
+Specs live in `frontend/tests/e2e/` (auth login, registration, master approval, plus shared `fixtures/`, `pages/`, and `utils/`).
