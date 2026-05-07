@@ -1,0 +1,116 @@
+{
+  "bookingPendingApproval": {
+    "subject": "ახალი ჯავშანი / New booking — {clientName}",
+    "kaTitle": "ახალი ჯავშანი — განხილვის მოლოდინში",
+    "enTitle": "New Booking — Pending Approval",
+    "kaMessage": "ახალი ჯავშანი გამოგზავნილია და ელოდება თქვენს დადასტურებას.",
+    "enMessage": "A new booking has been submitted and is awaiting your approval."
+  },
+  "bookingConfirmed": {
+    "subject": "ჯავშანი დადასტურებულია / Booking confirmed — {salonName}",
+    "kaTitle": "ჯავშანი დადასტურებულია",
+    "enTitle": "Booking Confirmed",
+    "kaMessage": "თქვენი ჯავშანი დადასტურებულია. გელოდებით!",
+    "enMessage": "Your booking has been confirmed. We look forward to seeing you!"
+  },
+  "bookingCancelledByClient": {
+    "subject": "ჯავშანი გაუქმებულია / Booking cancelled — {salonName}",
+    "kaTitle": "ჯავშანი გაუქმებულია",
+    "enTitle": "Booking Cancelled",
+    "kaMessage": "ეს ჯავშანი გაუქმდა კლიენტის მიერ.",
+    "enMessage": "This booking has been cancelled by the client."
+  },
+  "bookingCancelledByMaster": {
+    "subject": "ჯავშანი გაუქმებულია / Booking cancelled — {salonName}",
+    "kaTitle": "ჯავშანი გაუქმებულია",
+    "enTitle": "Booking Cancelled",
+    "kaMessage": "ეს ჯავშანი გაუქმდა მასტერის მიერ.",
+    "enMessage": "This booking has been cancelled by the master."
+  },
+  "bookingCompleted": {
+    "subject": "ჯავშანი დასრულებულია / Booking completed — {salonName}",
+    "kaTitle": "ჯავშანი დასრულებულია",
+    "enTitle": "Booking Completed",
+    "kaMessage": "თქვენი ვიზიტი დასრულდა. გმადლობთ! სიამოვნებით მოვისმენდით თქვენს გამოხმაურებას.",
+    "enMessage": "Your appointment has been completed. Thank you for visiting! We would love to hear your feedback."
+  },
+  "reminder24h": {
+    "subject": "შეხსენება: ხვალ გაქვთ ვიზიტი / Reminder: Your appointment is tomorrow",
+    "kaTitle": "შეხსენება — ხვალ გაქვთ ვიზიტი",
+    "enTitle": "Appointment Reminder — Tomorrow",
+    "kaMessage": "გახსოვდეთ, რომ ხვალ გაქვთ დაჯავშნილი ვიზიტი.",
+    "enMessage": "This is a friendly reminder that your appointment is tomorrow."
+  },
+  "bookingApprovalReminder": {
+    "subject": "შეხსენება: ჯავშანი ელოდება დადასტურებას / Reminder: Booking awaits your confirmation",
+    "kaTitle": "ჯავშანი ელოდება დადასტურებას",
+    "enTitle": "Booking Awaits Confirmation",
+    "kaMessage": "თქვენ გაქვთ დაუდასტურებელი ჯავშანი. გთხოვთ, დაადასტუროთ ან გააუქმოთ 3 საათის განმავლობაში, წინააღმდეგ შემთხვევაში ჯავშანი ავტომატურად გაუქმდება.",
+    "enMessage": "You have an unconfirmed booking. Please confirm or decline within 3 hours, otherwise the booking will be automatically cancelled."
+  },
+  "bookingExpired": {
+    "subject": "ჯავშანი ვადაგასული / Booking expired — {salonName}",
+    "kaTitle": "ჯავშანი ვადაგასულია",
+    "enTitle": "Booking Expired",
+    "kaMessage": "ეს ჯავშანი ავტომატურად გაუქმდა, რადგან მასტერმა დროულად არ დაადასტურა.",
+    "enMessage": "This booking has been automatically cancelled because the master did not confirm it in time."
+  },
+  "reminder3h": {
+    "subject": "შეხსენება: ვიზიტი 3 საათში / Reminder: Your appointment is in 3 hours",
+    "kaTitle": "შეხსენება — ვიზიტი 3 საათში",
+    "enTitle": "Appointment Reminder — 3 Hours",
+    "kaMessage": "გახსოვდეთ, რომ 3 საათში გაქვთ დაჯავშნილი ვიზიტი.",
+    "enMessage": "This is a friendly reminder that your appointment is coming up in 3 hours."
+  },
+  "passwordReset": {
+    "subject": "პაროლის აღდგენა / Reset your Bookio password",
+    "kaTitle": "პაროლის აღდგენა",
+    "enTitle": "Password Reset",
+    "kaBody": "თქვენ მოითხოვეთ პაროლის აღდგენა. გამოიყენეთ ქვემოთ მოცემული კოდი:",
+    "enBody": "You requested a password reset. Use the token below:",
+    "kaFootnote": "თუ ეს მოთხოვნა არ გამოგიგზავნიათ, უგულებელყავით ეს წერილი.",
+    "enFootnote": "If you did not request this, you can safely ignore this email."
+  },
+  "passwordChanged": {
+    "subject": "პაროლი შეიცვალა / Bookio password changed",
+    "kaTitle": "პაროლი წარმატებით შეიცვალა",
+    "enTitle": "Password Changed",
+    "kaBody": "თქვენი Bookio პაროლი წარმატებით განახლდა.",
+    "enBody": "Your Bookio password has been successfully changed.",
+    "kaFootnote": "თუ ეს ცვლილება არ განახორციელეთ, დაუყოვნებლივ დაგვიკავშირდით.",
+    "enFootnote": "If you did not make this change, please contact support immediately."
+  },
+  "masterCredentials": {
+    "subject": "მასტერის ანგარიში შეიქმნა / Bookio master account created",
+    "kaTitle": "კეთილი იყოს თქვენი მობრძანება Bookio-ში!",
+    "enTitle": "Welcome to Bookio!",
+    "kaBody": "თქვენთვის შეიქმნა <strong>მასტერის</strong> ანგარიში.",
+    "enBody": "An account has been created for you as a <strong>Master</strong>.",
+    "kaFootnote": "გთხოვთ, შეხვიდეთ სისტემაში და დაუყოვნებლივ შეცვალოთ პაროლი.",
+    "enFootnote": "Please log in and change your password immediately."
+  },
+  "accountCredentials": {
+    "subject": "ანგარიში შეიქმნა / Bookio account created",
+    "kaTitle": "კეთილი იყოს თქვენი მობრძანება Bookio-ში!",
+    "enTitle": "Welcome to Bookio!",
+    "kaBody": "თქვენთვის შეიქმნა ანგარიში როლით: <strong>{role}</strong>.",
+    "enBody": "An account has been created for you with the role <strong>{role}</strong>.",
+    "kaFootnote": "გთხოვთ, შეხვიდეთ სისტემაში და დაუყოვნებლივ შეცვალოთ პაროლი.",
+    "enFootnote": "Please log in and change your password immediately."
+  },
+  "labels": {
+    "salon": "სალონი / Salon",
+    "date": "თარიღი / Date",
+    "time": "დრო / Time",
+    "services": "მომსახურებები / Services",
+    "service": "მომსახურება / Service",
+    "duration": "ხანგრძლივობა",
+    "price": "ფასი",
+    "total": "სულ / Total",
+    "email": "ელ. ფოსტა / Email",
+    "tempPassword": "დროებითი პაროლი / Temp password",
+    "greeting": "გამარჯობა",
+    "seeSoon": "მალე გნახავთ! / See you soon!",
+    "footer": "© 2026 Bookio · ეს ავტომატური შეტყობინებაა / This is an automated message"
+  }
+}

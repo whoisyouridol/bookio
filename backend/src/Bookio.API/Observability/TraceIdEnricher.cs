@@ -1,0 +1,17 @@
+using System.Diagnostics;
+using Serilog.Core;
+using Serilog.Events;
+
+namespace Bookio.API.Observability;
+
+public class TraceIdEnricher : ILogEventEnricher
+{
+    public void Enrich(LogEvent logEvent, ILogEventPropertyFactory factory)
+    {
+        var activity = Activity.Current;
+        if (activity is null) return;
+
+        logEvent.AddPropertyIfAbsent(factory.CreateProperty("TraceId", activity.TraceId.ToString()));
+        logEvent.AddPropertyIfAbsent(factory.CreateProperty("SpanId", activity.SpanId.ToString()));
+    }
+}

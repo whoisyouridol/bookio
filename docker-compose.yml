@@ -1,3 +1,5 @@
+name: bookio
+
 services:
 
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
@@ -86,7 +88,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/BeautySalonBooking.API/Dockerfile
+      dockerfile: backend/src/Bookio.API/Dockerfile
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
@@ -128,7 +130,7 @@ services:
 
       # Subdomain cookie domain
       Subdomain__MainDomains__0: localhost
-      Subdomain__MainDomains__1: bookvisit.com
+      Subdomain__MainDomains__1: bookio.com
 
     networks:
       - backend_net

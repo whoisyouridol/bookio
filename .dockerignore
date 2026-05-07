@@ -22,7 +22,7 @@ appsettings.*.json
 **/*.user
 
 # Tests (not needed in production image)
-tests/
+backend/tests/
 
 # Docs & config
 *.md
