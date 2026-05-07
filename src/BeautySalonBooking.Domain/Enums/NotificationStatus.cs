@@ -5,5 +5,6 @@ public enum NotificationStatus
     Pending,
     Sent,
     Failed,
-    Cancelled
+    Cancelled,
+    Skipped
 }

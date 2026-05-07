@@ -2,6 +2,7 @@ using BeautySalonBooking.Application.Interfaces;
 using BeautySalonBooking.Domain.Enums;
 using BeautySalonBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace BeautySalonBooking.Infrastructure.Services;
@@ -11,6 +12,7 @@ public class NotificationJobProcessor
     private readonly AppDbContext _db;
     private readonly IEmailSender _emailSender;
     private readonly ISmsSender _smsSender;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<NotificationJobProcessor> _logger;
 
     private const int MaxAttempts = 3;
@@ -19,26 +21,48 @@ public class NotificationJobProcessor
         AppDbContext db,
         IEmailSender emailSender,
         ISmsSender smsSender,
+        IConfiguration configuration,
         ILogger<NotificationJobProcessor> logger)
     {
         _db = db;
         _emailSender = emailSender;
         _smsSender = smsSender;
+        _configuration = configuration;
         _logger = logger;
     }
 
     public async Task ProcessNotificationAsync(Guid notificationId)
     {
-        var notification = await _db.Notifications.FindAsync(notificationId);
+        var notification = await _db.Notifications
+            .Include(n => n.Booking)
+            .FirstOrDefaultAsync(n => n.Id == notificationId);
+
         if (notification is null)
         {
             _logger.LogWarning("Notification {Id} not found — skipping", notificationId);
             return;
         }
 
-        if (notification.Status is NotificationStatus.Sent or NotificationStatus.Cancelled)
+        if (notification.Status is NotificationStatus.Sent or NotificationStatus.Cancelled or NotificationStatus.Skipped)
         {
             _logger.LogInformation("Notification {Id} already {Status} — skipping", notificationId, notification.Status);
+            return;
+        }
+
+        // Staleness guard: if the appointment has already passed, do not send — mark as Skipped
+        var tzOffset = TimeSpan.FromHours(_configuration.GetValue<int>("Booking:TimezoneOffsetHours", 4));
+        var appointmentUtc = DateTime.SpecifyKind(
+            notification.Booking.BookingDate.ToDateTime(notification.Booking.StartTime) - tzOffset,
+            DateTimeKind.Utc);
+
+        if (appointmentUtc <= DateTime.UtcNow)
+        {
+            notification.Status = NotificationStatus.Skipped;
+            notification.FailureReason = "Appointment already passed — reminder not sent";
+            await _db.SaveChangesAsync();
+            _logger.LogInformation(
+                "Notification {Id} ({Type}) skipped — appointment {Date} {Time} already passed",
+                notificationId, notification.Type, notification.Booking.BookingDate, notification.Booking.StartTime);
             return;
         }
 

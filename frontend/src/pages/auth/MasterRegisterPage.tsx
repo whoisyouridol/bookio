@@ -40,6 +40,7 @@ export default function MasterRegisterPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -81,6 +82,10 @@ export default function MasterRegisterPage() {
     e.preventDefault();
     if (!email && !phone) {
       toast.error(t('auth.emailOrPhoneRequired'));
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error(t('auth.passwordsDoNotMatch'));
       return;
     }
     setLoading(true);
@@ -502,6 +507,21 @@ export default function MasterRegisterPage() {
                   className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-colors"
                   placeholder={t('registerProfessional.minCharacters')} minLength={6}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-text)] mb-1">{t('auth.confirmPassword')}</label>
+                <input
+                  required type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border rounded-[var(--radius-md)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors ${
+                    confirmPassword && password !== confirmPassword
+                      ? 'border-[var(--color-error)] focus:border-[var(--color-error)]'
+                      : 'border-[var(--color-border)] focus:border-[var(--color-primary)]'
+                  }`}
+                  minLength={6}
+                />
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-[var(--color-error)] mt-1">{t('auth.passwordsDoNotMatch')}</p>
+                )}
               </div>
               <button
                 type="submit" disabled={loading}

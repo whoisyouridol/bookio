@@ -3,8 +3,7 @@ import { getSalons } from '@/api/salons';
 import { getMasters } from '@/api/masters';
 import { getBookings } from '@/api/bookings';
 import { Link } from 'react-router';
-import { Building2, Users, Calendar, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { Building2, Users, Clock } from 'lucide-react';
 import { Badge, bookingStatusBadge } from '@/components/ui/Badge';
 import { Loader } from '@/components/ui/Loader';
 import { useTranslation } from 'react-i18next';
@@ -15,8 +14,6 @@ export default function DashboardPage() {
   const { data: masters } = useQuery({ queryKey: ['masters'], queryFn: getMasters, refetchOnMount: 'always' });
   const { data: bookings, isLoading } = useQuery({ queryKey: ['bookings'], queryFn: () => getBookings(), refetchOnMount: 'always' });
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const todayBookings = bookings?.filter(b => b.bookingDate === today) ?? [];
   const recent = bookings?.slice(0, 10) ?? [];
 
   return (
@@ -24,10 +21,9 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold text-[var(--color-text)] mb-6">{t('admin.dashboard.title')}</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <StatCard icon={<Building2 className="w-5 h-5 text-[var(--color-primary)]" />} label={t('admin.dashboard.salons')} value={salons?.length ?? 0} to="/admin/salons" />
-        <StatCard icon={<Users className="w-5 h-5 text-blue-600" />} label={t('admin.dashboard.masters')} value={masters?.length ?? 0} to="/admin/masters" />
-        <StatCard icon={<Calendar className="w-5 h-5 text-[var(--color-success)]" />} label={t('admin.dashboard.today')} value={todayBookings.length} to="/admin/bookings" />
+        <StatCard icon={<Users className="w-5 h-5 text-blue-600" />} label={t('admin.dashboard.masters')} value={masters?.length ?? 0} to="/admin/users" />
         <StatCard icon={<Clock className="w-5 h-5 text-orange-500" />} label={t('admin.dashboard.total')} value={bookings?.length ?? 0} to="/admin/bookings" />
       </div>
 

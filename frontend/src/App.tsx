@@ -116,10 +116,12 @@ const router = createBrowserRouter([
         path: 'masters',
         element: (
           <RoleGuard
-            allow={['superadmin', 'salon_admin']}
-            redirect={(role, _, masterId) =>
-              role === 'master_admin' && masterId ? `/admin/masters/${masterId}` : '/admin'
-            }
+            allow={['salon_admin']}
+            redirect={(role, _, masterId) => {
+              if (role === 'superadmin') return '/admin/users';
+              if (role === 'master_admin' && masterId) return `/admin/masters/${masterId}`;
+              return '/admin';
+            }}
           >
             <MastersPage />
           </RoleGuard>
